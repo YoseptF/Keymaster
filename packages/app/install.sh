@@ -19,12 +19,14 @@ fi
 [ "$LANGUAGE" = "es-419" ] || LANGUAGE="en"
 
 msg() {
-  local key="$1" text pair
+  local key="$1" text pair name value
   shift
   text="$(sed -n "s/^[[:space:]]*\"${key//./\\.}\"[[:space:]]*:[[:space:]]*\"\(.*\)\",\{0,1\}[[:space:]]*$/\1/p" "$APP_DIR/i18n/$LANGUAGE.json" | head -n 1)"
   [ -n "$text" ] || text="$key"
   for pair in "$@"; do
-    text="${text//\{${pair%%=*}\}/${pair#*=}}"
+    name="${pair%%=*}"
+    value="${pair#*=}"
+    text="${text//"{$name}"/"$value"}"
   done
   printf '%s' "$text"
 }
