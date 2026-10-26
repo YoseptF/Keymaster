@@ -5,6 +5,7 @@
   "app.start": "Iniciar",
   "app.cancel": "Cancelar",
   "app.language.label": "Idioma",
+  "app.language.system": "Idioma del sistema",
   "app.language.en": "English",
   "app.language.es_419": "Español (Latinoamérica)",
   "app.queue.section": "COLA",

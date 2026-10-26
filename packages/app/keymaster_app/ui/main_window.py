@@ -20,7 +20,7 @@ from keymaster_app.ui.preview import PreviewView, load_image
 from keymaster_app.ui.setup_check import SetupCheckDialog
 
 COL_CLIP, COL_HINT, COL_STATUS, COL_PROGRESS = range(4)
-LANGUAGE_CODES = ("en", "es-419")
+LANGUAGE_CODES = settings.PREFERENCES
 
 
 def _patterns(extensions: set[str]) -> str:
@@ -107,7 +107,7 @@ class MainWindow(QMainWindow):
         self.language_combo = QComboBox()
         for code in LANGUAGE_CODES:
             self.language_combo.addItem(code, code)
-        self.language_combo.setCurrentIndex(LANGUAGE_CODES.index(current().language))
+        self.language_combo.setCurrentIndex(LANGUAGE_CODES.index(self.resolved.preference))
         self.language_combo.currentIndexChanged.connect(self._on_language_changed)
         header.addWidget(self.setup_button)
         header.addSpacing(12)
@@ -277,8 +277,9 @@ class MainWindow(QMainWindow):
         self.subtitle_label.setText(t("app.subtitle"))
         self.setup_button.setText(t("app.setup.open"))
         self.language_label.setText(t("app.language.label"))
-        self.language_combo.setItemText(0, t("app.language.en"))
-        self.language_combo.setItemText(1, t("app.language.es_419"))
+        self.language_combo.setItemText(0, t("app.language.system"))
+        self.language_combo.setItemText(1, t("app.language.en"))
+        self.language_combo.setItemText(2, t("app.language.es_419"))
         self.queue_section.setText(t("app.queue.section"))
         self.drop_hint.setText(t("app.queue.drop_hint"))
         self.tree.setHeaderLabels([t("app.queue.col_clip"), t("app.queue.col_hint"),
@@ -323,16 +324,16 @@ class MainWindow(QMainWindow):
             self.setup_dialog.retranslate()
 
     def _on_language_changed(self, index: int) -> None:
-        code = self.language_combo.itemData(index)
-        language = current().set_language(code)
+        preference = settings.normalize_preference(self.language_combo.itemData(index))
+        current().set_language(settings.effective_language(preference))
         try:
-            settings.save_language(language)
+            settings.save_language(preference)
         except OSError:
             self.notice = ("save_failed", {})
         self.retranslate()
 
     def set_language(self, code: str) -> None:
-        self.language_combo.setCurrentIndex(LANGUAGE_CODES.index(settings.normalize_language(code)))
+        self.language_combo.setCurrentIndex(LANGUAGE_CODES.index(settings.normalize_preference(code)))
 
     def options(self) -> KeyOptions:
         folder = self.folder_edit.text().strip()

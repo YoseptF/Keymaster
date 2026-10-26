@@ -5,6 +5,7 @@
   "app.start": "Start",
   "app.cancel": "Cancel",
   "app.language.label": "Language",
+  "app.language.system": "System language",
   "app.language.en": "English",
   "app.language.es_419": "Español (Latinoamérica)",
   "app.queue.section": "QUEUE",
