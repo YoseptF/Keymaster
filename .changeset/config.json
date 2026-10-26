@@ -1,0 +1,12 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.0.3/schema.json",
+  "changelog": ["@changesets/changelog-github", { "repo": "YoseptF/Keymaster" }],
+  "commit": false,
+  "fixed": [],
+  "linked": [],
+  "access": "restricted",
+  "baseBranch": "release",
+  "updateInternalDependencies": "patch",
+  "privatePackages": { "version": true, "tag": false },
+  "ignore": []
+}
