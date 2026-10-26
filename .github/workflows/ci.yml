@@ -42,7 +42,7 @@ jobs:
   release-preview:
     name: What this merge releases
     if: github.event_name == 'pull_request' && github.base_ref == 'main'
-    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
