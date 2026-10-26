@@ -34,13 +34,19 @@ HARDCODED = {
     ".js": [
         re.compile(r"""\.(?:textContent|innerText|title|placeholder)\s*=\s*["'`][^"'`\n]*[A-Za-z]{2}"""),
         re.compile(r"""\balert\(\s*""" + WORDY),
+        re.compile(r"""\b(?:confirm|prompt)\(\s*""" + WORDY),
+        re.compile(r"""\.innerHTML\s*=\s*["'`][^"'`\n]*[A-Za-z]{2}"""),
+        re.compile(r"""\.setAttribute\(\s*["'](?:title|placeholder|aria-label|alt)["']\s*,\s*""" + WORDY),
     ],
     ".jsx": [
         re.compile(r"""\balert\(\s*""" + WORDY),
+        re.compile(r"""\b(?:confirm|prompt)\(\s*""" + WORDY),
+        re.compile(r"""\bnew\s+Window\(\s*["'][^"']*["']\s*,\s*""" + WORDY),
+        re.compile(r"""\.add\(\s*["'](?:statictext|button|checkbox|radiobutton|panel|edittext)["']\s*,\s*(?:\[[^\]]*\]|[^,()\[]*)\s*,\s*""" + WORDY),
     ],
     ".html": [
         re.compile(r""">\s*[^<>{}\s][^<>{}]*[A-Za-z]{2}[^<>{}]*<"""),
-        re.compile(r"""(?<![\w-])(?:title|placeholder|aria-label)=["'][^"']*[A-Za-z]{2}[^"']*["']"""),
+        re.compile(r"""(?<![\w-])(?:title|placeholder|aria-label|alt)=["'][^"']*[A-Za-z]{2}[^"']*["']"""),
     ],
     ".cpp": [
         re.compile(r"""\bset(?:Label|Labels|Hint|ScriptName)\(\s*"[^"\n]*[A-Za-z]{2}"""),
