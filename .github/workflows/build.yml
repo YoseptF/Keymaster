@@ -1,0 +1,71 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      suffix:
+        type: string
+        default: ""
+      ref:
+        type: string
+        default: ""
+      retention-days:
+        type: number
+        default: 14
+
+jobs:
+  linux:
+    name: Build for Linux
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    outputs:
+      url: ${{ steps.upload.outputs.artifact-url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: python scripts/package.py --platform linux --suffix "${{ inputs.suffix }}"
+      - id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: keymaster-linux
+          path: dist/
+          retention-days: ${{ inputs.retention-days }}
+          overwrite: true
+
+  windows:
+    name: Build for Windows
+    runs-on: windows-latest
+    timeout-minutes: 30
+    outputs:
+      url: ${{ steps.upload.outputs.artifact-url }}
+      built: ${{ steps.build.outputs.built }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - id: build
+        shell: bash
+        run: |
+          python scripts/package.py --platform windows --suffix "${{ inputs.suffix }}"
+          if ls dist/* >/dev/null 2>&1; then echo "built=true" >> "$GITHUB_OUTPUT"; else echo "built=false" >> "$GITHUB_OUTPUT"; fi
+      - id: upload
+        if: steps.build.outputs.built == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: keymaster-windows
+          path: dist/
+          retention-days: ${{ inputs.retention-days }}
+          overwrite: true

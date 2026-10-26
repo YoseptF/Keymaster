@@ -1,0 +1,37 @@
+name: Local CI off
+
+on: workflow_dispatch
+
+permissions:
+  actions: write
+
+jobs:
+  off:
+    name: Send CI back to GitHub's machines
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete CI_RUNNER
+        env:
+          GH_TOKEN: ${{ secrets.LOCAL_CI_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::LOCAL_CI_TOKEN is missing; run 'local-ci token' on the PC, or add a fine-grained token with Variables read and write as that secret"
+            exit 1
+          fi
+          out=$(gh variable delete CI_RUNNER --repo "$GITHUB_REPOSITORY" 2>&1) && echo "CI_RUNNER deleted" || case $out in
+            *404*|*"Not Found"*) echo "CI_RUNNER was not set" ;;
+            *) echo "$out"; exit 1 ;;
+          esac
+      - name: Restart jobs that were waiting for the PC
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for id in $(gh run list --repo "$GITHUB_REPOSITORY" --limit 100 --json databaseId,status -q '.[] | select(.status != "completed") | .databaseId'); do
+            [ "$id" = "$GITHUB_RUN_ID" ] && continue
+            stuck=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/jobs" -q '[.jobs[] | select(.status != "completed" and (.labels | index("local-ci")))] | length')
+            [ "$stuck" -gt 0 ] || continue
+            gh run cancel "$id" --repo "$GITHUB_REPOSITORY"
+            until [ "$(gh run view "$id" --repo "$GITHUB_REPOSITORY" --json status -q .status)" = completed ]; do sleep 5; done
+            gh run rerun "$id" --failed --repo "$GITHUB_REPOSITORY"
+            echo "restarted run $id"
+          done

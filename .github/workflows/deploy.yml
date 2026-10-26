@@ -1,0 +1,80 @@
+name: Production
+
+on:
+  push:
+    branches: [main]
+
+concurrency: production
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  version:
+    name: Turn changesets into versions
+    if: "!startsWith(github.event.head_commit.message, 'Version packages')"
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: Git identity for the version commit and the tags
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - id: commit
+        run: |
+          bun run version-packages
+          if git status --porcelain | grep -q .; then
+            git add .changeset packages/*/package.json packages/*/CHANGELOG.md bun.lock
+            git commit -m "Version packages"
+            git push origin HEAD:main
+            if ! git push origin HEAD:release; then
+              echo "::warning::release moved since this PR was opened; opening a sync PR instead"
+              gh pr create --base release --head main --title "Sync the version commit into release" \
+                --body "release changed after the release PR was opened, so the version commit could not be fast-forwarded. Merge this before the next release." || true
+            fi
+          else
+            echo "no pending changesets, no version bump"
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
+    needs: version
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ needs.version.outputs.sha }}
+      retention-days: 3
+
+  publish:
+    name: Tag and publish the releases
+    needs: [version, build]
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version.outputs.sha }}
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: keymaster-*
+          path: dist
+          merge-multiple: true
+      - name: Tag the new versions
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bash scripts/tag-packages.sh
+          git push --tags
+      - run: bash scripts/github-releases.sh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
