@@ -60,6 +60,9 @@ HARDCODED = {
     ".cpp": [
         re.compile(r"""\bset(?:Label|Labels|Hint|ScriptName)\(\s*"[^"\n]*[A-Za-z]{2}"""),
         re.compile(r"""\bsendMessage\([^;]*?"[^"\n]*[A-Za-z]{2}"""),
+        re.compile(r"""\b(?:message|setPersistentMessage)\(\s*[^,;]+,\s*[^,;]+,\s*[^,;]+,\s*"[^"\n]*[A-Za-z]{2}"""),
+        re.compile(r"""\bpropSetString\(\s*[^,;]+,\s*(?:kOfxPropLabel|kOfxPropShortLabel|kOfxPropLongLabel|kOfxParamPropHint|kOfxParamPropChoiceOption|kOfxPropPluginDescription|kOfxImageEffectPluginPropGrouping)\s*,\s*[^,;]+,\s*"[^"\n]*[A-Za-z]{2}"""),
+        re.compile(r"""\bprogressStart\(\s*[^,;]+,\s*"[^"\n]*[A-Za-z]{2}"""),
     ],
 }
 
