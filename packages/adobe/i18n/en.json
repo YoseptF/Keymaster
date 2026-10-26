@@ -1,8 +1,5 @@
 {
   "adobe.panel.title": "Keymaster",
-  "adobe.language.label": "Language",
-  "adobe.language.en": "English",
-  "adobe.language.es_419": "Español (Latinoamérica)",
   "adobe.source.label": "Source",
   "adobe.source.refresh": "Refresh",
   "adobe.source.refresh_tip": "Read the selected layer or clip again",
@@ -78,6 +75,5 @@
   "adobe.error.bad_path": "This path cannot be used: {path}",
   "adobe.error.no_outputs": "Pick at least one output.",
   "adobe.error.import_failed": "The results were saved, but importing them failed. See the details.",
-  "adobe.error.no_track": "The results were imported, but there was no free video track above the source to place the cutout.",
-  "adobe.error.settings_write": "Could not save the language to {path}."
+  "adobe.error.no_track": "The results were imported, but there was no free video track above the source to place the cutout."
 }

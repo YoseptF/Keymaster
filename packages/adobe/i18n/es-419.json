@@ -1,8 +1,5 @@
 {
   "adobe.panel.title": "Keymaster",
-  "adobe.language.label": "Idioma",
-  "adobe.language.en": "English",
-  "adobe.language.es_419": "Español (Latinoamérica)",
   "adobe.source.label": "Origen",
   "adobe.source.refresh": "Actualizar",
   "adobe.source.refresh_tip": "Vuelve a leer la capa o el clip seleccionado",
@@ -78,6 +75,5 @@
   "adobe.error.bad_path": "No se puede usar esta ruta: {path}",
   "adobe.error.no_outputs": "Elige al menos una salida.",
   "adobe.error.import_failed": "Los resultados se guardaron, pero no se pudieron importar. Revisa los detalles.",
-  "adobe.error.no_track": "Los resultados se importaron, pero no había una pista de video libre encima del origen para colocar el recorte.",
-  "adobe.error.settings_write": "No se pudo guardar el idioma en {path}."
+  "adobe.error.no_track": "Los resultados se importaron, pero no había una pista de video libre encima del origen para colocar el recorte."
 }

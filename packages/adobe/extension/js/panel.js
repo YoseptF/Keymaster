@@ -17,7 +17,8 @@
 
   var env = cs.getHostEnvironment();
   var host = hostLib.hostId(env.appName);
-  var settings = settingsLib.load();
+  var hostLocale = env.appUILocale;
+  var settings = settingsLib.load({ hostLocale: hostLocale });
   var i18n = i18nLib.createI18n(i18nLib.loadTables(extRoot, settingsLib.LANGUAGES), settings.language);
   var bridge = hostLib.createBridge(function (script, callback) { cs.evalScript(script, callback); });
   var storageKey = "keymaster.options." + (host || "unknown");
@@ -122,7 +123,6 @@
     $("despill-value").textContent = Number($("despill").value).toFixed(2);
     $("hint-path").textContent = state.hintFirstFrame || i18n.t("adobe.options.hint_none");
     $("output-root").textContent = state.outputRoot || i18n.t("adobe.options.output_root_default");
-    $("language").value = i18n.language();
 
     if (state.source) {
       $("source-name").textContent = state.source.name || "";
@@ -214,7 +214,7 @@
   function startKey() {
     if (state.job) return;
     saveOptions();
-    settings = settingsLib.load();
+    settings = settingsLib.load({ hostLocale: hostLocale });
     state.tracker = new progressLib.ProgressTracker();
     state.showProgress = false;
     state.detail = "";
@@ -266,7 +266,7 @@
   }
 
   function runDoctor() {
-    settings = settingsLib.load();
+    settings = settingsLib.load({ hostLocale: hostLocale });
     state.doctor = null;
     state.doctorStatus = { message_key: "adobe.status.doctor_running" };
     $("doctor").disabled = true;
@@ -282,19 +282,8 @@
     });
   }
 
-  function changeLanguage(lang) {
-    var chosen = settingsLib.normalizeLanguage(lang);
-    try {
-      settingsLib.writeLanguage(settings.file, chosen);
-    } catch (e) {
-      setError(errorsLib.KeymasterError({ message_key: "adobe.error.settings_write", params: { path: settings.file }, detail: e.message }));
-    }
-    i18n.setLanguage(chosen);
-    retranslate();
-  }
-
   function syncLanguage() {
-    var fresh = settingsLib.load();
+    var fresh = settingsLib.load({ hostLocale: hostLocale });
     settings = fresh;
     if (fresh.language !== i18n.language()) {
       i18n.setLanguage(fresh.language);
@@ -307,7 +296,6 @@
     $("cancel").addEventListener("click", cancelKey);
     $("doctor").addEventListener("click", runDoctor);
     $("refresh").addEventListener("click", function () { refreshSelection(); });
-    $("language").addEventListener("change", function (e) { changeLanguage(e.target.value); });
     $("hint-choose").addEventListener("click", function () {
       var file = choose(i18n.t("adobe.options.hint_dialog"), false, state.source ? nodePath.dirname(state.source.path) : "", ["png", "jpg", "jpeg", "exr", "tif", "tiff"]);
       if (file) {

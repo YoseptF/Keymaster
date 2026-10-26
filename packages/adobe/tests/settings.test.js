@@ -34,11 +34,24 @@ test("environment overrides the file, in order", () => {
   assert.deepStrictEqual(settings.resolveSettings(env, file, "win32"), { python: "D:\\py.exe", core: "D:\\core", language: "en" });
 });
 
-test("unknown or missing language becomes English", () => {
-  assert.strictEqual(settings.resolveSettings({}, { language: "fr" }, "linux").language, "en");
-  assert.strictEqual(settings.resolveSettings({}, {}, "linux").language, "en");
-  assert.strictEqual(settings.resolveSettings({}, { language: "ES-419" }, "linux").language, "es-419");
-  assert.strictEqual(settings.normalizeLanguage(42), "en");
+test("language: environment, then an explicit setting, then the app's locale", () => {
+  const r = (env, file, locale) => settings.resolveSettings(env, file, "win32", null, locale).language;
+  assert.strictEqual(r({}, {}, "es_MX"), "es-419");
+  assert.strictEqual(r({}, {}, "es_ES"), "es-419");
+  assert.strictEqual(r({}, {}, "es"), "es-419");
+  assert.strictEqual(r({}, {}, "en_US"), "en");
+  assert.strictEqual(r({}, {}, "fr_FR"), "en");
+  assert.strictEqual(r({}, {}, "est_EE"), "en");
+  assert.strictEqual(r({}, {}, undefined), "en");
+  assert.strictEqual(r({}, { language: "auto" }, "es_MX"), "es-419");
+  assert.strictEqual(r({}, { language: "en" }, "es_MX"), "en");
+  assert.strictEqual(r({}, { language: "ES-419" }, "en_US"), "es-419");
+  assert.strictEqual(r({}, { language: "fr" }, "es_AR"), "es-419");
+  assert.strictEqual(r({}, { language: 42 }, "en_GB"), "en");
+  assert.strictEqual(r({ KEYMASTER_LANGUAGE: "en" }, { language: "es-419" }, "es_MX"), "en");
+  assert.strictEqual(r({ KEYMASTER_LANGUAGE: "es-419" }, { language: "en" }, "en_US"), "es-419");
+  assert.strictEqual(r({ KEYMASTER_LANGUAGE: "auto" }, { language: "es-419" }, "en_US"), "es-419");
+  assert.strictEqual(r({ KEYMASTER_LANGUAGE: "auto" }, {}, "es_CO"), "es-419");
 });
 
 test("python falls back to the core venv when only core is known", () => {
@@ -60,22 +73,13 @@ test("broken or missing settings files read as empty", () => {
   assert.deepStrictEqual(settings.readSettings(bad), { language: "es-419" });
 });
 
-test("writing the language keeps the other keys and creates folders", () => {
-  const dir = tmpDir("settings-");
-  const file = path.join(dir, "Keymaster", "settings.json");
-  assert.deepStrictEqual(settings.writeLanguage(file, "es-419"), { language: "es-419" });
-  fs.writeFileSync(file, JSON.stringify({ language: "en", python: "/p", core: "/c" }));
-  settings.writeLanguage(file, "es-419");
-  assert.deepStrictEqual(JSON.parse(fs.readFileSync(file, "utf8")), { language: "es-419", python: "/p", core: "/c" });
-  settings.writeLanguage(file, "klingon");
-  assert.strictEqual(JSON.parse(fs.readFileSync(file, "utf8")).language, "en");
-  assert.deepStrictEqual(fs.readdirSync(path.dirname(file)), ["settings.json"]);
-});
-
 test("load reads the file named by the environment", () => {
   const dir = tmpDir("settings-");
   const file = path.join(dir, "s.json");
   fs.writeFileSync(file, JSON.stringify({ language: "es-419", python: "/py", core: "/core" }));
-  const got = settings.load({ env: { KEYMASTER_SETTINGS: file, KEYMASTER_CORE: "/other" }, platform: "linux", home: "/home/x" });
+  const got = settings.load({ env: { KEYMASTER_SETTINGS: file, KEYMASTER_CORE: "/other" }, platform: "linux", home: "/home/x", hostLocale: "en_US" });
   assert.deepStrictEqual(got, { python: "/py", core: "/other", language: "es-419", file: file });
+  fs.writeFileSync(file, JSON.stringify({ python: "/py", core: "/core" }));
+  assert.strictEqual(settings.load({ env: { KEYMASTER_SETTINGS: file }, hostLocale: "es_MX" }).language, "es-419");
+  assert.strictEqual(settings.load({ env: { KEYMASTER_SETTINGS: file } }).language, "en");
 });

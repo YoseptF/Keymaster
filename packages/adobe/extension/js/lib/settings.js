@@ -9,13 +9,21 @@ function pathApi(platform) {
   return platform === "win32" ? nodePath.win32 : nodePath.posix;
 }
 
-function normalizeLanguage(value) {
-  if (typeof value !== "string") return "en";
-  var v = value.trim();
+function explicitLanguage(value) {
+  if (typeof value !== "string") return null;
+  var v = value.trim().toLowerCase();
   for (var i = 0; i < LANGUAGES.length; i++) {
-    if (LANGUAGES[i].toLowerCase() === v.toLowerCase()) return LANGUAGES[i];
+    if (LANGUAGES[i].toLowerCase() === v) return LANGUAGES[i];
   }
-  return "en";
+  return null;
+}
+
+function languageFromLocale(locale) {
+  return typeof locale === "string" && /^es(?:[_-]|$)/i.test(locale.trim()) ? "es-419" : "en";
+}
+
+function resolveLanguage(env, fileData, hostLocale) {
+  return explicitLanguage(env.KEYMASTER_LANGUAGE) || explicitLanguage(fileData.language) || languageFromLocale(hostLocale);
 }
 
 function settingsPath(env, platform, home) {
@@ -48,11 +56,11 @@ function nonEmpty(value) {
   return typeof value === "string" && value.trim() ? value.trim() : "";
 }
 
-function resolveSettings(env, fileData, platform, exists) {
+function resolveSettings(env, fileData, platform, exists, hostLocale) {
   var core = nonEmpty(env.KEYMASTER_CORE) || nonEmpty(fileData.core);
   var python = nonEmpty(env.KEYMASTER_PYTHON) || nonEmpty(fileData.python);
   if (!python && core && exists && exists(venvPython(core, platform))) python = venvPython(core, platform);
-  var language = normalizeLanguage(nonEmpty(env.KEYMASTER_LANGUAGE) || fileData.language);
+  var language = resolveLanguage(env, fileData, hostLocale);
   return { python: python, core: core, language: language };
 }
 
@@ -64,29 +72,19 @@ function load(options) {
   var f = o.fs || fs;
   var file = settingsPath(env, platform, home);
   var data = readSettings(file, f);
-  var resolved = resolveSettings(env, data, platform, function (p) { return f.existsSync(p); });
+  var resolved = resolveSettings(env, data, platform, function (p) { return f.existsSync(p); }, o.hostLocale);
   resolved.file = file;
   return resolved;
 }
 
-function writeLanguage(file, language, fsApi) {
-  var f = fsApi || fs;
-  var data = readSettings(file, f);
-  data.language = normalizeLanguage(language);
-  f.mkdirSync(nodePath.dirname(file), { recursive: true });
-  var tmp = file + ".tmp-" + process.pid;
-  f.writeFileSync(tmp, JSON.stringify(data, null, 2) + "\n", "utf8");
-  f.renameSync(tmp, file);
-  return data;
-}
-
 module.exports = {
   LANGUAGES: LANGUAGES,
-  normalizeLanguage: normalizeLanguage,
+  explicitLanguage: explicitLanguage,
+  languageFromLocale: languageFromLocale,
+  resolveLanguage: resolveLanguage,
   settingsPath: settingsPath,
   readSettings: readSettings,
   resolveSettings: resolveSettings,
   venvPython: venvPython,
-  load: load,
-  writeLanguage: writeLanguage
+  load: load
 };

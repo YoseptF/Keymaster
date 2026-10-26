@@ -22,9 +22,10 @@ function boot(options) {
   const dir = tmpDir("panel-");
   const settingsFile = path.join(dir, "Keymaster", "settings.json");
   fs.mkdirSync(path.dirname(settingsFile), { recursive: true });
-  fs.writeFileSync(settingsFile, JSON.stringify(Object.assign({ language: "es-419", python: python(), core: FAKE_CORE }, options.settings || {})));
+  fs.writeFileSync(settingsFile, JSON.stringify(Object.assign({ python: python(), core: FAKE_CORE }, options.settings || {})));
   process.env.KEYMASTER_SETTINGS = settingsFile;
-  delete process.env.KEYMASTER_LANGUAGE;
+  if (options.envLanguage) process.env.KEYMASTER_LANGUAGE = options.envLanguage;
+  else delete process.env.KEYMASTER_LANGUAGE;
   delete process.env.KEYMASTER_PYTHON;
   delete process.env.KEYMASTER_CORE;
 
@@ -50,6 +51,7 @@ function boot(options) {
   CSInterface.prototype.getSystemPath = () => EXT;
   CSInterface.prototype.getHostEnvironment = () => ({
     appName: options.appName || "AEFT",
+    appUILocale: options.locale === undefined ? "es_MX" : options.locale,
     appSkinInfo: options.skin || { panelBackgroundColor: { color: { red: 50, green: 50, blue: 50 } }, baseFontSize: 10 }
   });
   CSInterface.prototype.evalScript = (script, cb) => { scripts.push(script); hostEval(script, cb); };
@@ -87,7 +89,6 @@ test("the panel boots translated, themed, with the selection shown", async () =>
   assert.strictEqual(p.doc.documentElement.getAttribute("lang"), "es-419");
   assert.strictEqual(p.$("status").textContent, "Listo.");
   assert.strictEqual(p.$("format").value, "exr");
-  assert.strictEqual(p.$("language").value, "es-419");
   assert.strictEqual(p.$("hint-path").textContent, "Ninguna");
   assert.strictEqual(p.doc.documentElement.style.props["--km-bg"], "#323232");
   assert.strictEqual(p.doc.documentElement.style.props["--km-font-size"], "10px");
@@ -104,18 +105,35 @@ test("Premiere defaults to video and the theme follows host changes", async () =
   assert.ok(p.csListeners["com.adobe.csxs.events.ThemeColorChanged"]);
 });
 
-test("switching language writes the shared settings and re-translates live", async () => {
-  const p = boot({});
+test("the panel follows the app's language unless settings or env pin one", async () => {
+  assert.strictEqual(boot({ locale: "en_US" }).$("key").textContent, "Key");
+  assert.strictEqual(boot({ locale: "es_ES" }).$("key").textContent, "Hacer key");
+  assert.strictEqual(boot({ locale: "fr_FR" }).$("key").textContent, "Key");
+  assert.strictEqual(boot({ locale: "en_US", settings: { language: "es-419" } }).$("key").textContent, "Hacer key");
+  assert.strictEqual(boot({ locale: "es_MX", settings: { language: "en" } }).$("key").textContent, "Key");
+  assert.strictEqual(boot({ locale: "es_MX", settings: { language: "auto" } }).$("key").textContent, "Hacer key");
+  try {
+    assert.strictEqual(boot({ locale: "es_MX", settings: { language: "es-419" }, envLanguage: "en" }).$("key").textContent, "Key");
+    assert.strictEqual(boot({ locale: "en_US", settings: { language: "en" }, envLanguage: "es-419" }).$("key").textContent, "Hacer key");
+  } finally {
+    delete process.env.KEYMASTER_LANGUAGE;
+  }
+});
+
+test("the panel never writes the language and picks up settings changes on focus", async () => {
+  const p = boot({ locale: "es_MX" });
   await until(() => p.$("source-name").textContent === "Actor", "selection");
-  p.$("language").value = "en";
-  p.$("language").dispatch("change");
-  assert.strictEqual(JSON.parse(fs.readFileSync(p.settingsFile, "utf8")).language, "en");
-  assert.strictEqual(JSON.parse(fs.readFileSync(p.settingsFile, "utf8")).core, FAKE_CORE);
-  assert.strictEqual(p.$("key").textContent, "Key");
-  assert.strictEqual(p.$("status").textContent, "Ready.");
-  assert.strictEqual(p.doc.documentElement.getAttribute("lang"), "en");
+  assert.strictEqual(p.doc.getElementById("language"), null);
+  p.$("key").click();
+  await until(() => p.$("status").className === "status ok", "done");
   const s = JSON.parse(fs.readFileSync(p.settingsFile, "utf8"));
-  s.language = "es-419";
+  assert.ok(!("language" in s));
+  s.language = "en";
+  fs.writeFileSync(p.settingsFile, JSON.stringify(s));
+  p.windowListeners.focus();
+  assert.strictEqual(p.$("key").textContent, "Key");
+  assert.strictEqual(p.doc.documentElement.getAttribute("lang"), "en");
+  s.language = "auto";
   fs.writeFileSync(p.settingsFile, JSON.stringify(s));
   p.windowListeners.focus();
   assert.strictEqual(p.$("key").textContent, "Hacer key");
