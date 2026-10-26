@@ -202,7 +202,7 @@ test("setup check lists the doctor results", async () => {
   await until(() => p.$("checks").children.length === 4, "doctor");
   assert.strictEqual(p.$("setup-status").textContent, "Everything is ready.");
   assert.deepStrictEqual(p.$("checks").children.map((li) => li.className), ["ok", "ok", "ok", "ok"]);
-  assert.strictEqual(p.$("checks").children[0].textContent, "gpu: OK");
+  assert.strictEqual(p.$("checks").children[0].textContent, "GPU: Fake GPU (24 GB)");
 });
 
 test("a missing core shows the install hint", async () => {
