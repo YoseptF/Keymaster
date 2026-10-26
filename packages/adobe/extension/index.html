@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title data-i18n="adobe.panel.title"></title>
+  <link rel="stylesheet" href="css/panel.css">
+</head>
+<body>
+  <header class="row">
+    <h1 data-i18n="adobe.panel.title"></h1>
+    <label class="language">
+      <span class="sr" data-i18n="adobe.language.label"></span>
+      <select id="language" data-i18n-title="adobe.language.label">
+        <option value="en" data-i18n="adobe.language.en"></option>
+        <option value="es-419" data-i18n="adobe.language.es_419"></option>
+      </select>
+    </label>
+  </header>
+
+  <section>
+    <div class="row">
+      <h2 data-i18n="adobe.source.label"></h2>
+      <button id="refresh" class="small" data-i18n="adobe.source.refresh" data-i18n-title="adobe.source.refresh_tip"></button>
+    </div>
+    <div id="source-name" class="value"></div>
+    <div id="source-path" class="path"></div>
+  </section>
+
+  <section>
+    <h2 data-i18n="adobe.options.title"></h2>
+
+    <div class="field">
+      <span class="label" data-i18n="adobe.options.hint" data-i18n-title="adobe.options.hint_tip"></span>
+      <div class="row">
+        <div id="hint-path" class="path grow"></div>
+        <button id="hint-choose" class="small" data-i18n="adobe.options.choose"></button>
+        <button id="hint-clear" class="small" data-i18n="adobe.options.clear"></button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="hint-quality" class="label" data-i18n="adobe.options.hint_quality" data-i18n-title="adobe.options.hint_quality_tip"></label>
+      <div class="row">
+        <input id="hint-quality" type="range" min="0" max="1" step="0.01" class="grow">
+        <output id="hint-quality-value" for="hint-quality"></output>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="despill" class="label" data-i18n="adobe.options.despill" data-i18n-title="adobe.options.despill_tip"></label>
+      <div class="row">
+        <input id="despill" type="range" min="0" max="1" step="0.01" class="grow">
+        <output id="despill-value" for="despill"></output>
+      </div>
+    </div>
+
+    <div class="field">
+      <span class="label" data-i18n="adobe.options.outputs"></span>
+      <div class="checks">
+        <label><input type="checkbox" name="output" value="cutout"> <span data-i18n="adobe.output.cutout"></span></label>
+        <label><input type="checkbox" name="output" value="alpha"> <span data-i18n="adobe.output.alpha"></span></label>
+        <label><input type="checkbox" name="output" value="fg"> <span data-i18n="adobe.output.fg"></span></label>
+        <label><input type="checkbox" name="output" value="checker"> <span data-i18n="adobe.output.checker"></span></label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="format" class="label" data-i18n="adobe.options.format"></label>
+      <select id="format">
+        <option value="exr" data-i18n="adobe.format.exr"></option>
+        <option value="video" data-i18n="adobe.format.video"></option>
+      </select>
+    </div>
+
+    <div class="field">
+      <span class="label" data-i18n="adobe.options.output_root"></span>
+      <div class="row">
+        <div id="output-root" class="path grow"></div>
+        <button id="output-choose" class="small" data-i18n="adobe.options.choose"></button>
+        <button id="output-clear" class="small" data-i18n="adobe.options.reset"></button>
+      </div>
+    </div>
+
+    <div class="checks">
+      <label data-i18n-title="adobe.options.disable_source_tip"><input id="disable-source" type="checkbox"> <span data-i18n="adobe.options.disable_source"></span></label>
+      <label data-i18n-title="adobe.options.low_vram_tip"><input id="low-vram" type="checkbox"> <span data-i18n="adobe.options.low_vram"></span></label>
+    </div>
+  </section>
+
+  <section>
+    <div class="row actions">
+      <button id="key" class="primary grow" data-i18n="adobe.action.key"></button>
+      <button id="cancel" data-i18n="adobe.action.cancel" disabled></button>
+    </div>
+    <progress id="progress" max="100" value="0"></progress>
+    <div class="row">
+      <div id="phase" class="grow"></div>
+      <div id="percent"></div>
+    </div>
+    <div id="status" class="status"></div>
+    <details id="details" hidden>
+      <summary data-i18n="adobe.details"></summary>
+      <pre id="details-text"></pre>
+    </details>
+  </section>
+
+  <section>
+    <div class="row">
+      <h2 class="grow" data-i18n="adobe.setup.title"></h2>
+      <button id="doctor" class="small" data-i18n="adobe.action.doctor"></button>
+    </div>
+    <div id="setup-status" class="status"></div>
+    <ul id="checks" class="checklist"></ul>
+  </section>
+
+  <script src="vendor/adobe/CSInterface.js"></script>
+  <script src="js/panel.js"></script>
+</body>
+</html>
