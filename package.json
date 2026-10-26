@@ -1,0 +1,19 @@
+{
+  "name": "keymaster",
+  "private": true,
+  "scripts": {
+    "changeset": "changeset",
+    "version-packages": "changeset version && bun install --no-frozen-lockfile",
+    "check:changeset": "bash scripts/check-changeset.sh",
+    "check:i18n": "python3 scripts/check-i18n.py",
+    "build": "python3 scripts/package.py",
+    "test": "bash scripts/test.sh"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3"
+  },
+  "workspaces": [
+    "packages/*"
+  ]
+}
