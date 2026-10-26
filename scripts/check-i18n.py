@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGES = ROOT / "packages"
 LANGS = ("en", "es-419")
 CODE_SUFFIXES = {".py", ".js", ".jsx", ".mjs", ".html", ".cpp", ".h", ".hpp"}
-SKIP_DIRS = {"node_modules", "__pycache__", "tests", "upstream", "build", "dist"}
+SKIP_DIRS = {"node_modules", "__pycache__", "tests", "testing", "upstream", "build", "dist"}
 SKIP_FILES = {"build.py"}
 
 KEY = r"""["']([a-z0-9_]+(?:\.[a-z0-9_]+)+)["']"""
