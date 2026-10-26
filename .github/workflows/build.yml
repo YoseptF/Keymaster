@@ -30,7 +30,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: python scripts/package.py --platform linux --suffix "${{ inputs.suffix }}"
+      - run: python scripts/package.py --platform linux --suffix="${{ inputs.suffix }}"
       - id: upload
         uses: actions/upload-artifact@v4
         with:
@@ -59,7 +59,7 @@ jobs:
       - id: build
         shell: bash
         run: |
-          python scripts/package.py --platform windows --suffix "${{ inputs.suffix }}"
+          python scripts/package.py --platform windows --suffix="${{ inputs.suffix }}"
           if ls dist/* >/dev/null 2>&1; then echo "built=true" >> "$GITHUB_OUTPUT"; else echo "built=false" >> "$GITHUB_OUTPUT"; fi
       - id: upload
         if: steps.build.outputs.built == 'true'
