@@ -67,6 +67,3 @@ value follows the app. The `KEYMASTER_LANGUAGE` environment variable overrides b
 the panel from the repository on Windows, link `packages\adobe\extension` into
 `%APPDATA%\Adobe\CEP\extensions\com.keymaster.adobe` (`mklink /J`) and set `PlayerDebugMode`;
 in that layout the panel reads its translations straight from the repository.
-
-`vendor/adobe/CSInterface.js` is Adobe's library, distributed under Adobe's CEP SDK license
-(`vendor/adobe/LICENSE.pdf`), not under the Keymaster licence.

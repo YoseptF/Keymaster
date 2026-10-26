@@ -1,9 +1,9 @@
 (function () {
   "use strict";
 
-  var cs = new CSInterface();
+  var adobe = KeymasterCep.connect(window.__adobe_cep__, process.platform);
   var nodePath = require("path");
-  var extRoot = cs.getSystemPath(SystemPath.EXTENSION);
+  var extRoot = adobe.extensionPath();
   function lib(name) {
     return require(nodePath.join(extRoot, "js", "lib", name + ".js"));
   }
@@ -15,12 +15,12 @@
   var jobLib = lib("job");
   var progressLib = lib("progress");
 
-  var env = cs.getHostEnvironment();
+  var env = adobe.hostEnvironment();
   var host = hostLib.hostId(env.appName);
   var hostLocale = env.appUILocale;
   var settings = settingsLib.load({ hostLocale: hostLocale });
   var i18n = i18nLib.createI18n(i18nLib.loadTables(extRoot, settingsLib.LANGUAGES), settings.language);
-  var bridge = hostLib.createBridge(function (script, callback) { cs.evalScript(script, callback); });
+  var bridge = hostLib.createBridge(adobe.evalScript);
   var storageKey = "keymaster.options." + (host || "unknown");
 
   var state = {
@@ -186,7 +186,7 @@
   }
 
   function applyTheme() {
-    var skin = cs.getHostEnvironment().appSkinInfo;
+    var skin = adobe.hostEnvironment().appSkinInfo;
     var vars = themeLib.themeVars(skin);
     Object.keys(vars).forEach(function (name) {
       document.documentElement.style.setProperty(name, vars[name]);
@@ -335,7 +335,7 @@
       syncLanguage();
       refreshSelection();
     });
-    cs.addEventListener(CSInterface.THEME_COLOR_CHANGED_EVENT, applyTheme);
+    adobe.onThemeChange(applyTheme);
   }
 
   function loadHostScripts() {

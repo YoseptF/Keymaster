@@ -73,6 +73,3 @@ variable de entorno `KEYMASTER_LANGUAGE` tiene prioridad sobre ambos.
 Para probar el panel desde el repositorio en Windows, enlaza `packages\adobe\extension` en
 `%APPDATA%\Adobe\CEP\extensions\com.keymaster.adobe` (`mklink /J`) y activa `PlayerDebugMode`;
 con esa estructura el panel lee las traducciones directamente del repositorio.
-
-`vendor/adobe/CSInterface.js` es la biblioteca de Adobe, distribuida bajo la licencia del SDK de
-CEP de Adobe (`vendor/adobe/LICENSE.pdf`), no bajo la licencia de Keymaster.

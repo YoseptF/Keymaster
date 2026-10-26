@@ -46,16 +46,16 @@ function boot(options) {
   const csListeners = {};
   const hostEval = evalScript(hostCtx);
   const scripts = [];
-  function CSInterface() {}
-  CSInterface.THEME_COLOR_CHANGED_EVENT = "com.adobe.csxs.events.ThemeColorChanged";
-  CSInterface.prototype.getSystemPath = () => EXT;
-  CSInterface.prototype.getHostEnvironment = () => ({
-    appName: options.appName || "AEFT",
-    appUILocale: options.locale === undefined ? "es_MX" : options.locale,
-    appSkinInfo: options.skin || { panelBackgroundColor: { color: { red: 50, green: 50, blue: 50 } }, baseFontSize: 10 }
-  });
-  CSInterface.prototype.evalScript = (script, cb) => { scripts.push(script); hostEval(script, cb); };
-  CSInterface.prototype.addEventListener = (type, fn) => { csListeners[type] = fn; };
+  const adobeCep = {
+    getSystemPath: (type) => (type === "extension" ? "file://" + encodeURI(EXT) : ""),
+    getHostEnvironment: () => JSON.stringify({
+      appName: options.appName || "AEFT",
+      appUILocale: options.locale === undefined ? "es_MX" : options.locale,
+      appSkinInfo: options.skin || { panelBackgroundColor: { color: { red: 50, green: 50, blue: 50 } }, baseFontSize: 10 }
+    }),
+    evalScript: (script, cb) => { scripts.push(script); hostEval(script, cb); },
+    addEventListener: (type, fn) => { csListeners[type] = fn; }
+  };
   const storage = {};
   const dialogs = [];
   const windowListeners = {};
@@ -66,8 +66,7 @@ function boot(options) {
     clearTimeout,
     console,
     document: doc,
-    CSInterface,
-    SystemPath: { EXTENSION: "extension" },
+    __adobe_cep__: adobeCep,
     localStorage: {
       getItem: (k) => (k in storage ? storage[k] : null),
       setItem: (k, v) => { storage[k] = String(v); }
@@ -76,7 +75,10 @@ function boot(options) {
     addEventListener: (type, fn) => { windowListeners[type] = fn; }
   });
   ctx.window = ctx;
-  vm.runInContext(fs.readFileSync(path.join(EXT, "js", "panel.js"), "utf8"), ctx, { filename: "panel.js" });
+  const html = fs.readFileSync(path.join(EXT, "index.html"), "utf8");
+  for (const m of html.matchAll(/<script src="([^"]+)"><\/script>/g)) {
+    vm.runInContext(fs.readFileSync(path.join(EXT, m[1]), "utf8"), ctx, { filename: m[1] });
+  }
   const $ = (id) => doc.getElementById(id);
   return { $, doc, ae, comp, layer, settingsFile, storage, dialogs, csListeners, windowListeners, scripts };
 }

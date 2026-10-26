@@ -28,7 +28,7 @@ test("build.py writes an installable zip with bundled translations", () => {
   const manifest = fs.readFileSync(path.join(ext, "CSXS", "manifest.xml"), "utf8");
   assert.match(manifest, /ExtensionBundleVersion="1\.2\.3"/);
   assert.match(manifest, /<Extension Id="com\.keymaster\.adobe\.panel" Version="1\.2\.3"\/>/);
-  for (const rel of ["index.html", "js/panel.js", "jsx/common.jsx", "jsx/aeft.jsx", "jsx/ppro.jsx", "vendor/adobe/CSInterface.js", "vendor/adobe/LICENSE.pdf"]) {
+  for (const rel of ["index.html", "js/panel.js", "jsx/common.jsx", "jsx/aeft.jsx", "jsx/ppro.jsx", "js/cep.js"]) {
     assert.ok(fs.existsSync(path.join(ext, rel)), rel);
   }
   const srcLibs = fs.readdirSync(path.join(EXT, "js", "lib")).sort();
@@ -36,6 +36,7 @@ test("build.py writes an installable zip with bundled translations", () => {
   const tables = lib("i18n").loadTables(ext, ["en", "es-419"]);
   const own = JSON.parse(fs.readFileSync(path.join(PKG, "i18n", "es-419.json"), "utf8"));
   for (const key of Object.keys(own)) assert.strictEqual(tables["es-419"][key], own[key]);
+  assert.ok(!names.some((n) => /vendor|CSInterface/.test(n)));
   assert.ok(!names.some((n) => n.includes("/tests/") || n.endsWith("build.py") || n.endsWith("package.json")));
 });
 
