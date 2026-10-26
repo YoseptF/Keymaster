@@ -160,7 +160,7 @@ def patched(target, name: str, value):
 
 @contextmanager
 def instrument(rt, tracker: Tracker, infer_cfg, total_frames: int):
-    state = {"pass": 0, "passes": 1, "windows": 1, "written": {}, "releasing": False}
+    state = {"pass": 0, "passes": 1, "windows": 1, "started": 0, "written": {}, "releasing": False}
 
     def chunk_wrapper(original):
         def wrapper(*a, **kw):
@@ -186,6 +186,14 @@ def instrument(rt, tracker: Tracker, infer_cfg, total_frames: int):
             tracker.update("prepass", 1.0)
             state["windows"] = max(1, len(rt.window_starts(int(meta["num_frames"]), kw["chunk"], kw["stride"])))
             tracker.update("stage1", 0.0)
+            reader_cls = kw.get("reader_cls")
+            if reader_cls is not None:
+                class CountedReader(reader_cls):
+                    def window(self, t0, t1):
+                        state["started"] += 1
+                        return super().window(t0, t1)
+
+                kw["reader_cls"] = CountedReader
             result = original(model, source, meta, **kw)
             tracker.update("stage1", 1.0)
             return result
@@ -199,6 +207,8 @@ def instrument(rt, tracker: Tracker, infer_cfg, total_frames: int):
             def write_many(self, frames):
                 result = super().write_many(frames)
                 state["written"][id(self)] = state["written"].get(id(self), 0) + len(frames)
+                if state["started"]:
+                    tracker.update("stage1", state["started"] / state["windows"])
                 tracker.update("stage2", min(state["written"].values()) / max(1, total_frames))
                 return result
 

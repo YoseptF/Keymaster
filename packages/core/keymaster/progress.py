@@ -19,7 +19,7 @@ class Tracker:
         self.local = {name: 0.0 for name in self.phases}
         self.fraction = 0.0
         self.sent = -1.0
-        self.phase = None
+        self.seen: set[str] = set()
         self.lock = threading.Lock()
 
     def overall(self) -> float:
@@ -31,10 +31,10 @@ class Tracker:
             value = min(1.0, max(0.0, float(value)))
             self.local[phase] = max(self.local[phase], value)
             self.fraction = max(self.fraction, min(1.0, self.overall()))
-            changed = phase != self.phase
-            if not (force or changed or self.fraction - self.sent >= STEP):
+            first = phase not in self.seen
+            if not (force or first or self.fraction - self.sent >= STEP):
                 return
-            self.phase = phase
+            self.seen.add(phase)
             self.sent = self.fraction
             self.emit({"event": "progress", "phase": phase, "fraction": round(self.fraction, 4),
                        "message_key": self.phases[phase]["message_key"]})
