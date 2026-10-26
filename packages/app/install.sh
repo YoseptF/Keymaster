@@ -12,16 +12,20 @@ setting() {
   sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p" "$SETTINGS" | head -n 1
 }
 
-LANGUAGE="${KEYMASTER_LANGUAGE:-$(setting language)}"
-if [ -z "$LANGUAGE" ]; then
-  case "${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}" in es*) LANGUAGE="es-419" ;; *) LANGUAGE="en" ;; esac
+explicit() {
+  case "$1" in en|es-419) printf '%s' "$1" ;; esac
+}
+
+UI_LANG="$(explicit "${KEYMASTER_LANGUAGE:-}")"
+[ -n "$UI_LANG" ] || UI_LANG="$(explicit "$(setting language)")"
+if [ -z "$UI_LANG" ]; then
+  case "${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}" in es*) UI_LANG="es-419" ;; *) UI_LANG="en" ;; esac
 fi
-[ "$LANGUAGE" = "es-419" ] || LANGUAGE="en"
 
 msg() {
   local key="$1" text pair name value
   shift
-  text="$(sed -n "s/^[[:space:]]*\"${key//./\\.}\"[[:space:]]*:[[:space:]]*\"\(.*\)\",\{0,1\}[[:space:]]*$/\1/p" "$APP_DIR/i18n/$LANGUAGE.json" | head -n 1)"
+  text="$(sed -n "s/^[[:space:]]*\"${key//./\\.}\"[[:space:]]*:[[:space:]]*\"\(.*\)\",\{0,1\}[[:space:]]*$/\1/p" "$APP_DIR/i18n/$UI_LANG.json" | head -n 1)"
   [ -n "$text" ] || text="$key"
   for pair in "$@"; do
     name="${pair%%=*}"
@@ -71,8 +75,8 @@ chmod +x "$LAUNCHER"
 say "app.install.launcher" "path=$LAUNCHER"
 
 cp "$APP_DIR/keymaster_app/assets/icon.svg" "$DATA_DIR/icons/hicolor/scalable/apps/keymaster-app.svg"
-COMMENT_EN="$(LANGUAGE=en msg "app.desktop.comment")"
-COMMENT_ES="$(LANGUAGE=es-419 msg "app.desktop.comment")"
+COMMENT_EN="$(UI_LANG=en msg "app.desktop.comment")"
+COMMENT_ES="$(UI_LANG=es-419 msg "app.desktop.comment")"
 cat > "$DATA_DIR/applications/keymaster-app.desktop" <<EOF
 [Desktop Entry]
 Type=Application

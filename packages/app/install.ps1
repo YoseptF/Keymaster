@@ -15,11 +15,11 @@ function Setting([string]$Name) {
     return ""
 }
 
-$Language = if ($env:KEYMASTER_LANGUAGE) { $env:KEYMASTER_LANGUAGE } else { Setting "language" }
-if (-not $Language) {
-    $Language = if ((Get-Culture).TwoLetterISOLanguageName -eq "es") { "es-419" } else { "en" }
-}
-if ($Language -ne "es-419") { $Language = "en" }
+$Explicit = @("en", "es-419")
+$Language = ""
+if ($Explicit -contains $env:KEYMASTER_LANGUAGE) { $Language = $env:KEYMASTER_LANGUAGE }
+elseif ($Explicit -contains (Setting "language")) { $Language = Setting "language" }
+else { $Language = if ((Get-UICulture).TwoLetterISOLanguageName -eq "es") { "es-419" } else { "en" } }
 
 function Load-Table([string]$Lang) {
     $table = @{}
