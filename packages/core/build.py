@@ -22,7 +22,7 @@ def main() -> None:
             rel = path.relative_to(HERE)
             if not path.is_file() or SKIP_DIRS & set(rel.parts[:-1]) or path.suffix == ".pyc" or rel.parts[:2] in SKIP_PREFIXES:
                 continue
-            if rel.parts[0] in {"build.py", "package.json", "CHANGELOG.md"}:
+            if rel.parts[0] in {"build.py", "package.json", "CHANGELOG.md", "test.sh"}:
                 continue
             zf.write(path, f"keymaster-core/{rel.as_posix()}")
         for keep in ("upstream/weights", "upstream/vfms/cradio", "upstream/vfms/moge", "upstream/vfms/rvm"):
