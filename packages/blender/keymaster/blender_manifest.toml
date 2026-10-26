@@ -1,0 +1,17 @@
+schema_version = "1.0.0"
+
+id = "keymaster"
+version = "0.0.0"
+name = "Keymaster"
+tagline = "CorridorKey 2.0 green-screen keying in the Video Sequencer"
+maintainer = "Keymaster"
+type = "add-on"
+website = "https://github.com/YoseptF/Keymaster"
+tags = ["Sequencer", "Compositing"]
+
+blender_version_min = "5.0.0"
+
+license = ["SPDX:GPL-3.0-or-later"]
+
+[permissions]
+files = "Runs the Keymaster keyer and reads and writes the keyed frames"
