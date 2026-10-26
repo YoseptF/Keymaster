@@ -105,8 +105,14 @@ class SetupCheckDialog(QDialog):
         self.running = True
         self.run_button.setEnabled(False)
         self._render()
-        threading.Thread(target=lambda: self.bridge.finished.emit(run_doctor(resolved.python, resolved.core)),
-                         daemon=True).start()
+        threading.Thread(target=self._doctor, args=(resolved.python, resolved.core), daemon=True).start()
+
+    def _doctor(self, python: str, core: str) -> None:
+        result = run_doctor(python, core)
+        try:
+            self.bridge.finished.emit(result)
+        except RuntimeError:
+            pass
 
     def _on_finished(self, result: RunResult) -> None:
         self.running = False
