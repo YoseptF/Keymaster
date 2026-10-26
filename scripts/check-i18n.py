@@ -30,6 +30,10 @@ HARDCODED = {
         re.compile(r"""\bQ(?:Label|PushButton|CheckBox|GroupBox|Action|RadioButton)\(\s*""" + WORDY),
         re.compile(r"""\bQMessageBox\.\w+\([^)]*?""" + WORDY),
         re.compile(r"""\bself\.report\(\s*\{[^}]*\}\s*,\s*""" + WORDY),
+        re.compile(r"""\b(?:bl_category|heading|confirm_text)\s*=\s*""" + WORDY),
+        re.compile(r"""\b(?:Bool|Int|Float|String|Enum|Pointer|Collection)(?:Vector)?Property\([^)]*?\bname\s*=\s*""" + WORDY),
+        re.compile(r"""\bitems\s*=\s*[\[(]\s*\(\s*["'][^"'\n]*["']\s*,\s*""" + WORDY),
+        re.compile(r"""\bpoll_message_set\(\s*""" + WORDY),
     ],
     ".js": [
         re.compile(r"""\.(?:textContent|innerText|title|placeholder)\s*=\s*["'`][^"'`\n]*[A-Za-z]{2}"""),
