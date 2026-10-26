@@ -15,9 +15,17 @@ tiempo, cuadro por cuadro encima del original.
 3. En Blender, abre Editar > Preferencias > Obtener extensiones, abre el menú de arriba a la
    derecha y elige Instalar desde disco. Selecciona el zip.
 4. En las preferencias de la extensión, presiona Revisar configuración. Cada línea debe tener una
-   palomita. Ahí mismo ves qué núcleo y qué Python encontró Keymaster, y puedes cambiar el idioma
-   entre English y Español (Latinoamérica). El idioma se comparte con todas las demás apps de
-   Keymaster.
+   palomita. Ahí mismo ves qué núcleo y qué Python encontró Keymaster.
+
+## Idioma
+
+El complemento está en English o Español (Latinoamérica) y sigue el idioma de la interfaz de
+Blender: cualquier variante de español da español, todo lo demás inglés. Si la traducción de la
+interfaz está apagada o el idioma está en Automático, sigue el idioma de tu sistema. Para fijar un
+idioma en todas las apps de Keymaster, pon `"language"` en `"en"` o `"es-419"` en el archivo de
+configuración compartido de Keymaster (`"auto"`, el valor por defecto, sigue al programa), o define
+la variable de entorno `KEYMASTER_LANGUAGE`. El panel cambia la próxima vez que se redibuja; las
+descripciones emergentes y los nombres en el menú de búsqueda F3 cambian al reiniciar Blender.
 
 ## Uso
 

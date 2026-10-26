@@ -15,9 +15,17 @@ frame on top of the original.
 3. In Blender, open Edit > Preferences > Get Extensions, open the menu at the top right and choose
    Install from Disk. Pick the zip.
 4. In the extension's preferences, press Check setup. Every line should have a check mark. The
-   same place shows which core and Python Keymaster found, and lets you switch the language
-   between English and Español (Latinoamérica). The language is shared with every other Keymaster
-   app.
+   same place shows which core and Python Keymaster found.
+
+## Language
+
+The add-on speaks English or Español (Latinoamérica) and follows Blender's interface language:
+any Spanish variant gives Spanish, everything else English. With interface translation off or the
+language set to Automatic, it follows your system's language instead. To force one language for
+every Keymaster app, set `"language"` to `"en"` or `"es-419"` in the shared Keymaster settings
+file (`"auto"`, the default, means follow the host), or set the `KEYMASTER_LANGUAGE` environment
+variable. The panel switches on its next redraw; tooltips and the names in the F3 search menu
+switch after restarting Blender.
 
 ## Use
 
