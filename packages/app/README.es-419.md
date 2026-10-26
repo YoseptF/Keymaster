@@ -48,8 +48,13 @@ Si el núcleo todavía no está instalado, el instalador se detiene y te lo avis
    composición; la app solo muestra la vista previa de resultados PNG.
 
 **Revisar instalación** ejecuta el diagnóstico del núcleo (tarjeta gráfica, FFmpeg, archivos del
-modelo, PyTorch) y te dice qué falta. El menú de idioma cambia entre inglés y español al instante y
-recuerda tu elección para todos los programas de Keymaster.
+modelo, PyTorch) y te dice qué falta.
+
+El menú de idioma tiene tres opciones: **Idioma del sistema** (la predeterminada: español si tu
+sistema está en cualquier variante de español, inglés en los demás casos), **English** y **Español
+(Latinoamérica)**. El cambio se aplica al instante y se guarda para todos los programas de
+Keymaster. La variable de entorno `KEYMASTER_LANGUAGE` (`en` o `es-419`) tiene prioridad sobre lo
+que guardaste, y los instaladores siguen las mismas reglas.
 
 También puedes abrir la app con clips ya en la cola: `keymaster-app clip1.mp4 carpeta_de_cuadros/`.
 

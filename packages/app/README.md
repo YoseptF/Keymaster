@@ -44,8 +44,12 @@ If the core is not installed yet, the installer stops and tells you so.
    get to the files. EXR results open in your compositor; the app previews PNG results only.
 
 **Setup check** runs the core's own diagnostics (graphics card, FFmpeg, model files, PyTorch) and
-tells you what is missing. The language menu switches between English and Spanish right away and
-remembers your choice for every Keymaster host.
+tells you what is missing.
+
+The language menu has three choices: **System language** (the default, Spanish when your system is
+in any Spanish variant, English otherwise), **English** and **Español (Latinoamérica)**. The change
+applies right away and is saved for every Keymaster host. The `KEYMASTER_LANGUAGE` environment
+variable (`en` or `es-419`) overrides the saved choice, and the installers follow the same rules.
 
 You can also start the app with clips already queued: `keymaster-app clip1.mp4 frames_folder/`.
 
