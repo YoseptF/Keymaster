@@ -39,27 +39,40 @@ def settings_path() -> Path:
 
 def read_settings() -> dict:
     try:
-        return json.loads(settings_path().read_text(encoding="utf-8"))
+        data = json.loads(settings_path().read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
+    return data if isinstance(data, dict) else {}
 
 
-def fail_if_asked() -> bool:
+def effective_settings() -> dict:
+    data = read_settings()
+    for key, var in (("python", "KEYMASTER_PYTHON"), ("core", "KEYMASTER_CORE"), ("language", "KEYMASTER_LANGUAGE")):
+        if os.environ.get(var):
+            data[key] = os.environ[var]
+    if data.get("language") not in ("en", "es-419"):
+        data["language"] = "en"
+    return data
+
+
+def fail_if_asked() -> int:
     code = os.environ.get("KEYMASTER_FAKE_FAIL")
     if code:
         emit({"event": "error", "message_key": f"core.error.{code}", "params": {}, "detail": f"fake failure {code}"})
-        return True
-    return False
+        return 130 if code == "cancelled" else 1
+    return 0
 
 
 def cmd_key(args) -> int:
     frames = args.frames if args.frames and args.frames > 0 else 4
     width, height = 16, 9
-    emit({"event": "start", "input": args.input, "frames": frames, "width": width, "height": height, "fps": 24.0})
+    start = max(0, args.start_frame)
+    emit({"event": "start", "input": args.input, "first_frame": start, "frames": frames, "width": width, "height": height, "fps": 24.0})
     for i, phase in enumerate(("load", "prepass", "stage1", "stage2", "write")):
         emit({"event": "progress", "phase": phase, "fraction": round((i + 1) / 6, 4), "message_key": f"core.progress.{phase}"})
-    if fail_if_asked():
-        return 1
+    failed = fail_if_asked()
+    if failed:
+        return failed
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     stem = Path(args.input).stem
@@ -69,14 +82,14 @@ def cmd_key(args) -> int:
         if args.format == "video":
             path = out_dir / f"{stem}_{kind}.{'mov' if kind == 'cutout' else 'mp4'}"
             path.write_bytes(b"fake video")
-            item = {"event": "output", "kind": kind, "type": "video", "path": str(path), "first_frame": 0, "frames": frames}
+            item = {"event": "output", "kind": kind, "type": "video", "path": str(path), "first_frame": start, "frames": frames}
         else:
             seq = out_dir / f"{stem}_{kind}"
             seq.mkdir(exist_ok=True)
-            for f in range(frames):
+            for f in range(start, start + frames):
                 png(seq / f"{kind}_{f:06d}.png", width, height, channels, 200)
             item = {"event": "output", "kind": kind, "type": "image_sequence", "path": str(seq),
-                    "pattern": str(seq / f"{kind}_%06d.png"), "first_frame": 0, "frames": frames}
+                    "pattern": str(seq / f"{kind}_%06d.png"), "first_frame": start, "frames": frames}
         emit(item)
         outputs.append(item)
     emit({"event": "progress", "phase": "write", "fraction": 1.0, "message_key": "core.progress.write"})
@@ -85,24 +98,38 @@ def cmd_key(args) -> int:
 
 
 def cmd_doctor(args) -> int:
-    checks = [{"id": i, "ok": True, "message_key": f"core.doctor.{i}_ok", "params": {}} for i in ("gpu", "ffmpeg", "weights", "torch")]
-    emit({"event": "doctor", "ok": True, "checks": checks})
-    return 0
+    failing = {"no_gpu": "gpu", "ffmpeg_missing": "ffmpeg", "weights_missing": "weights",
+               "dependency_missing": "torch"}.get(os.environ.get("KEYMASTER_FAKE_FAIL", ""), None)
+    if os.environ.get("KEYMASTER_FAKE_FAIL") and failing is None:
+        failing = "gpu"
+    checks = [{"id": i, "ok": i != failing, "message_key": f"core.doctor.{i}_{'missing' if i == failing else 'ok'}", "params": {}}
+              for i in ("gpu", "ffmpeg", "weights", "torch")]
+    ok = failing is None
+    emit({"event": "doctor", "ok": ok, "checks": checks})
+    return 0 if ok else 1
 
 
 def cmd_setup(args) -> int:
-    emit({"event": "progress", "phase": "load", "fraction": 1.0, "message_key": "core.progress.load"})
-    if fail_if_asked():
-        return 1
+    emit({"event": "progress", "phase": "download", "fraction": 0.5, "message_key": "core.progress.download_corridorkey"})
+    failed = fail_if_asked()
+    if failed:
+        return failed
+    emit({"event": "progress", "phase": "download", "fraction": 1.0, "message_key": "core.progress.download_done"})
     emit({"event": "done", "outputs": [], "seconds": 0.0})
     return 0
 
 
 def cmd_settings(args) -> int:
-    data = read_settings()
     if args.action == "get":
+        data = effective_settings()
         print(json.dumps(data.get(args.key) if args.key else data))
         return 0
+    if args.key not in ("language", "python", "core") or args.value is None or (
+            args.key == "language" and args.value not in ("en", "es-419")):
+        emit({"event": "error", "message_key": "core.error.invalid_setting",
+              "params": {"key": args.key or "", "value": args.value or ""}, "detail": "fake invalid setting"})
+        return 1
+    data = read_settings()
     data[args.key] = args.value
     path = settings_path()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -111,7 +138,7 @@ def cmd_settings(args) -> int:
     return 0
 
 
-def main() -> int:
+def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="keymaster")
     sub = ap.add_subparsers(dest="command", required=True)
     key = sub.add_parser("key")
@@ -123,6 +150,7 @@ def main() -> int:
     key.add_argument("--despill", type=float, default=0.5)
     key.add_argument("--format", choices=("exr", "video"), default="exr")
     key.add_argument("--outputs", nargs="+", default=["alpha", "fg", "cutout"], choices=("alpha", "fg", "cutout", "checker"))
+    key.add_argument("--start-frame", type=int, default=0)
     key.add_argument("--frames", type=int, default=0)
     key.add_argument("--low-vram", action="store_true")
     for name in ("doctor", "setup"):
@@ -133,7 +161,11 @@ def main() -> int:
     st.add_argument("value", nargs="?")
     for p in sub.choices.values():
         p.add_argument("--json", action="store_true")
-    args = ap.parse_args()
+    return ap
+
+
+def main() -> int:
+    args = build_parser().parse_args()
     return {"key": cmd_key, "doctor": cmd_doctor, "setup": cmd_setup, "settings": cmd_settings}[args.command](args)
 
 
