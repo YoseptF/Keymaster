@@ -101,7 +101,7 @@ def main(argv=None, out=None) -> int:
     json_mode = "--json" in argv
     real_process = out is None
     events = out if out is not None else sys.stdout
-    if real_process and json_mode and not (argv[:1] == ["settings"]):
+    if real_process and argv[:1] != ["settings"]:
         events = claim_stdout()
     emitter = Emitter(json_mode, stream=events)
     previous_stdout = sys.stdout
