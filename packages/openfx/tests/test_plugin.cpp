@@ -1,3 +1,4 @@
+#include <chrono>
 #include <cmath>
 #include <cstdarg>
 #include <cstdlib>
@@ -287,8 +288,11 @@ static OfxStatus progressStart(void*, const char* label) {
     gProgressLabels.push_back(label);
     return kOfxStatOK;
 }
+static bool gCancelWhileKeying = false;
+
 static OfxStatus progressUpdate(void*, double value) {
     gProgress.push_back(value);
+    if (gCancelWhileKeying && !gProgressLabels.empty() && gProgressLabels.back() == "Keymaster: keying") return kOfxStatReplyNo;
     return kOfxStatOK;
 }
 static OfxStatus progressEnd(void*) { return kOfxStatOK; }
@@ -584,6 +588,19 @@ int main() {
     CHECK_EQ(gMessages.size(), (size_t)1);
     if (!gMessages.empty()) CHECK(gMessages[0].find("core.log") != std::string::npos);
     CHECK(!gPersistent.empty());
+
+    setenv("KEYMASTER_FAKE_DELAY", "3", 1);
+    gCancelWhileKeying = true;
+    gMessages.clear();
+    auto started = std::chrono::steady_clock::now();
+    press(plugin, *inst, "keyClip");
+    double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+    gCancelWhileKeying = false;
+    unsetenv("KEYMASTER_FAKE_DELAY");
+    CHECK(seconds < 3.0);
+    CHECK(gMessages.empty());
+    CHECK(gPersistent.find("missing") != std::string::npos);
+    CHECK(dirParam && !fs::exists(fs::path(dirParam->s) / "keymaster-openfx.json"));
 
     press(plugin, *inst, "keyClip");
     CHECK(gPersistent.empty());
