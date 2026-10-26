@@ -134,10 +134,17 @@ int paramInt(OfxParamHandle param) {
     return value;
 }
 
-const char* kFormat = "%s";
+std::string escapeFormat(const std::string& text) {
+    std::string out;
+    for (char c : text) {
+        out += c;
+        if (c == '%') out += '%';
+    }
+    return out;
+}
 
 void sendMessage(Instance* inst, const char* type, const std::string& text) {
-    if (gMessage) gMessage->message(inst->effect, type, nullptr, kFormat, text.c_str());
+    if (gMessage) gMessage->message(inst->effect, type, nullptr, escapeFormat(text).c_str());
 }
 
 bool sourceRange(Instance* inst, int& first, int& last) {
@@ -209,7 +216,7 @@ void refreshStatus(Instance* inst) {
         gMessage2->clearPersistentMessage(inst->effect);
         return;
     }
-    gMessage2->setPersistentMessage(inst->effect, type, nullptr, kFormat, text.c_str());
+    gMessage2->setPersistentMessage(inst->effect, type, nullptr, escapeFormat(text).c_str());
 }
 
 struct ImageView {
