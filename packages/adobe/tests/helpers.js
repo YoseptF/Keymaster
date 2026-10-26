@@ -2,7 +2,6 @@
 
 const path = require("path");
 const fs = require("fs");
-const os = require("os");
 
 const PKG = path.resolve(__dirname, "..");
 const EXT = path.join(PKG, "extension");
@@ -14,7 +13,7 @@ function lib(name) {
 }
 
 function tmpDir(prefix) {
-  const base = path.join(os.tmpdir(), "keymaster-adobe-tests");
+  const base = path.join(ROOT, "tmp", "adobe-tests");
   fs.mkdirSync(base, { recursive: true });
   return fs.mkdtempSync(path.join(base, prefix || "t-"));
 }
