@@ -40,7 +40,7 @@ HARDCODED = {
     ],
     ".html": [
         re.compile(r""">\s*[^<>{}\s][^<>{}]*[A-Za-z]{2}[^<>{}]*<"""),
-        re.compile(r"""\b(?:title|placeholder|aria-label)=["'][^"']*[A-Za-z]{2}[^"']*["']"""),
+        re.compile(r"""(?<![\w-])(?:title|placeholder|aria-label)=["'][^"']*[A-Za-z]{2}[^"']*["']"""),
     ],
     ".cpp": [
         re.compile(r"""\bset(?:Label|Labels|Hint|ScriptName)\(\s*"[^"\n]*[A-Za-z]{2}"""),
