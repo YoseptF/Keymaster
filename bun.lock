@@ -13,6 +13,10 @@
       "name": "keymaster-app",
       "version": "0.0.0",
     },
+    "packages/blender": {
+      "name": "keymaster-blender",
+      "version": "0.0.0",
+    },
     "packages/core": {
       "name": "keymaster-core",
       "version": "0.0.0",
@@ -86,6 +90,8 @@
     "jsonc-parser": ["jsonc-parser@3.3.1", "", {}, "sha512-HUgH65KyejrUFPvHFPbqOY0rsFip3Bo5wb4ngvdi1EpCYWUQDC5V+Y7mZws+DLkr4M//zQJoanu1SP+87Dv1oQ=="],
 
     "keymaster-app": ["keymaster-app@workspace:packages/app"],
+
+    "keymaster-blender": ["keymaster-blender@workspace:packages/blender"],
 
     "keymaster-core": ["keymaster-core@workspace:packages/core"],
 

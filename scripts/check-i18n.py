@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGES = ROOT / "packages"
 LANGS = ("en", "es-419")
 CODE_SUFFIXES = {".py", ".js", ".jsx", ".mjs", ".html", ".cpp", ".h", ".hpp", ".sh", ".ps1"}
-SKIP_DIRS = {"node_modules", "__pycache__", "tests", "testing", "upstream", "build", "dist"}
+SKIP_DIRS = {"node_modules", "__pycache__", "tests", "testing", "upstream", "build", "dist", ".venv", "venv"}
 SKIP_FILES = {"build.py"}
 
 KEY = r"""["']([a-z0-9_]+(?:\.[a-z0-9_]+)+)["']"""
@@ -35,6 +35,10 @@ HARDCODED = {
         re.compile(r"""\bQ(?:Menu|ListWidgetItem|TableWidgetItem|StandardItem|ToolButton|CommandLinkButton)\(\s*""" + WORDY),
         re.compile(r"""\bQ(?:FileDialog\.get\w+|InputDialog\.get\w+)\(\s*[\w.]+\s*,\s*""" + WORDY),
         re.compile(r"""\bself\.report\(\s*\{[^}]*\}\s*,\s*""" + WORDY),
+        re.compile(r"""\b(?:bl_category|heading|confirm_text)\s*=\s*""" + WORDY),
+        re.compile(r"""\b(?:Bool|Int|Float|String|Enum|Pointer|Collection)(?:Vector)?Property\([^)]*?\bname\s*=\s*""" + WORDY),
+        re.compile(r"""\bitems\s*=\s*[\[(]\s*\(\s*["'][^"'\n]*["']\s*,\s*""" + WORDY),
+        re.compile(r"""\bpoll_message_set\(\s*""" + WORDY),
     ],
     ".js": [
         re.compile(r"""\.(?:textContent|innerText|title|placeholder)\s*=\s*["'`][^"'`\n]*[A-Za-z]{2}"""),
