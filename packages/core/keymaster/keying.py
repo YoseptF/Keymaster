@@ -85,6 +85,10 @@ def preflight(args) -> None:
         if hint and not Path(hint).exists():
             raise KeymasterError(message_key="core.error.input_unreadable", params={"path": hint},
                                  detail=f"hint not found: {hint}")
+    if args.start_frame < 0 or args.frames < 0:
+        raise KeymasterError(message_key="core.error.invalid_arguments",
+                             params={"problem": f"--start-frame {args.start_frame} --frames {args.frames}"},
+                             detail="--start-frame and --frames must not be negative")
     for name, value in (("despill", args.despill), ("hint-quality", args.hint_quality)):
         if not 0.0 <= value <= 1.0:
             raise KeymasterError(message_key="core.error.invalid_arguments", params={"problem": f"--{name} {value}"},
@@ -139,6 +143,8 @@ def probe(rt, args, infer_cfg) -> dict:
                 model_scale=infer_cfg.model_scale, linear_brightness=infer_cfg.linear_brightness,
                 linear_contrast=infer_cfg.linear_contrast,
                 linear_contrast_pivot=infer_cfg.linear_contrast_pivot)
+    except KeymasterError:
+        raise
     except Exception as exc:
         raise KeymasterError(message_key="core.error.input_unreadable", params={"path": args.input},
                              detail=f"{type(exc).__name__}: {exc}") from exc
@@ -148,18 +154,49 @@ def probe(rt, args, infer_cfg) -> dict:
     return meta
 
 
+def trim_meta(meta: dict, start: int, frames: int) -> dict:
+    available = int(meta["num_frames"])
+    if start >= available:
+        raise KeymasterError(message_key="core.error.invalid_arguments",
+                             params={"problem": f"--start-frame {start} >= {available} frames"},
+                             detail=f"--start-frame {start} is past the last frame ({available} frames)")
+    count = available - start if frames <= 0 else min(frames, available - start)
+    meta["start_frame"] = start
+    meta["num_frames"] = count
+    if "frame_paths" in meta:
+        meta["frame_paths"] = list(meta["frame_paths"])[start:start + count]
+    return meta
+
+
 @contextmanager
-def patched(target, name: str, value):
-    original = getattr(target, name)
-    setattr(target, name, value)
+def trimmed(rt, start: int, frames: int):
+    video, frame_dir, hints = rt.probe_video_meta, rt.probe_frame_dir_meta, rt.make_hint_reader
+
+    def probe_video(path, *a, num_frames=-1, **kw):
+        kw.pop("start_mode", None)
+        return trim_meta(video(path, *a, num_frames=-1, start_mode="begin", **kw), start, frames)
+
+    def probe_dir(path, *a, num_frames=-1, **kw):
+        return trim_meta(frame_dir(path, *a, num_frames=-1, **kw), start, frames)
+
+    def hint_reader(path, meta):
+        reader = hints(path, meta)
+        if reader is not None and start and hasattr(reader, "paths"):
+            reader.paths = list(reader.paths)[start:]
+            if len(reader.paths) < int(meta["num_frames"]):
+                raise KeymasterError(message_key="core.error.input_unreadable", params={"path": str(path)},
+                                     detail=f"{path}: not enough hint frames after --start-frame {start}")
+        return reader
+
+    rt.probe_video_meta, rt.probe_frame_dir_meta, rt.make_hint_reader = probe_video, probe_dir, hint_reader
     try:
-        yield original
+        yield
     finally:
-        setattr(target, name, original)
+        rt.probe_video_meta, rt.probe_frame_dir_meta, rt.make_hint_reader = video, frame_dir, hints
 
 
 @contextmanager
-def instrument(rt, tracker: Tracker, infer_cfg, total_frames: int):
+def instrument(rt, tracker: Tracker, infer_cfg, total_frames: int, start_frame: int = 0):
     state = {"pass": 0, "passes": 1, "windows": 1, "started": 0, "written": {}, "releasing": False}
 
     def chunk_wrapper(original):
@@ -204,6 +241,11 @@ def instrument(rt, tracker: Tracker, infer_cfg, total_frames: int):
 
     def writer_wrapper(original):
         class Counted(original):
+            def __init__(self, *a, **kw):
+                super().__init__(*a, **kw)
+                if hasattr(self, "frame_idx"):
+                    self.frame_idx = start_frame
+
             def write_many(self, frames):
                 result = super().write_many(frames)
                 state["written"][id(self)] = state["written"].get(id(self), 0) + len(frames)
@@ -246,7 +288,7 @@ def instrument(rt, tracker: Tracker, infer_cfg, total_frames: int):
         sys.stdout = previous_stdout
 
 
-def collect_outputs(rt, args, total_frames: int) -> list[dict]:
+def collect_outputs(rt, args, total_frames: int, start: int = 0) -> list[dict]:
     out_dir = Path(args.output_dir).resolve()
     clip = rt.raw_clip_name(args.input)
     items = []
@@ -254,20 +296,20 @@ def collect_outputs(rt, args, total_frames: int) -> list[dict]:
         suffix = output_suffix(kind, args.despill)
         if args.format == "exr":
             seq = out_dir / f"{clip}_{suffix}_exr"
-            first = seq / f"{suffix}_{0:06d}.exr"
-            last = seq / f"{suffix}_{total_frames - 1:06d}.exr"
+            first = seq / f"{suffix}_{start:06d}.exr"
+            last = seq / f"{suffix}_{start + total_frames - 1:06d}.exr"
             if not (first.is_file() and last.is_file()):
                 raise KeymasterError(message_key="core.error.unknown",
                                      detail=f"expected {first} .. {last} after keying")
             items.append({"event": "output", "kind": kind, "type": "image_sequence", "path": str(seq),
-                          "pattern": str(seq / f"{suffix}_%06d.exr"), "first_frame": 0, "frames": total_frames})
+                          "pattern": str(seq / f"{suffix}_%06d.exr"), "first_frame": start, "frames": total_frames})
         else:
             ext = ".mov" if kind == "cutout" else ".mp4"
             path = out_dir / f"{clip}_{suffix}{ext}"
             if not path.is_file() or path.stat().st_size == 0:
                 raise KeymasterError(message_key="core.error.encode_failed", detail=f"expected {path} after keying")
             items.append({"event": "output", "kind": kind, "type": "video", "path": str(path),
-                          "first_frame": 0, "frames": total_frames})
+                          "first_frame": start, "frames": total_frames})
     return items
 
 
@@ -281,28 +323,10 @@ def run_key(args, emit, upstream_loader=None, temp_base: Path | None = None) -> 
     if not torch.cuda.is_available():
         raise KeymasterError(message_key="core.error.no_gpu", detail="torch.cuda.is_available() is False")
     temp_dir = make_temp_dir(temp_base)
+    start = int(args.start_frame)
     try:
-        infer_cfg, writer_cfg = build_configs(rt, args, temp_dir)
-        meta = probe(rt, args, infer_cfg)
-        total = int(meta["num_frames"])
-        height, width = (int(v) for v in meta["output_hw"])
-        emit({"event": "start", "input": args.input, "frames": total, "width": width, "height": height,
-              "fps": round(float(meta["native_fps"]), 3)})
-        tracker = Tracker(emit)
-        tracker.update("load", 0.0)
-        runtime_paths = rt.RuntimePaths.from_package(paths.UPSTREAM_DIR)
-        model = rt.load_model(runtime_paths, device="cuda")
-        tracker.update("load", 1.0)
-        with instrument(rt, tracker, infer_cfg, total):
-            rt.run_inference(model, args.input, args.output_dir, infer_cfg, writer_cfg,
-                             initial_hint_path=args.hint_first_frame, hint_video_path=args.hint_video)
-        outputs = collect_outputs(rt, args, total)
-        tracker.finish("write")
-        for item in outputs:
-            emit(item)
-        done = {"event": "done", "outputs": outputs, "seconds": round(time.monotonic() - started, 1)}
-        emit(done)
-        return done
+        with trimmed(rt, start, int(args.frames)):
+            return keyed(rt, args, emit, temp_dir, start, started)
     except BaseException as exc:
         error = classify(exc)
         if error.message_key == "core.error.input_unreadable" and not error.params.get("path"):
@@ -314,3 +338,27 @@ def run_key(args, emit, upstream_loader=None, temp_base: Path | None = None) -> 
         raise error from exc
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def keyed(rt, args, emit, temp_dir: Path, start: int, started: float) -> dict:
+    infer_cfg, writer_cfg = build_configs(rt, args, temp_dir)
+    meta = probe(rt, args, infer_cfg)
+    total = int(meta["num_frames"])
+    height, width = (int(v) for v in meta["output_hw"])
+    emit({"event": "start", "input": args.input, "first_frame": start, "frames": total, "width": width,
+          "height": height, "fps": round(float(meta["native_fps"]), 3)})
+    tracker = Tracker(emit)
+    tracker.update("load", 0.0)
+    runtime_paths = rt.RuntimePaths.from_package(paths.UPSTREAM_DIR)
+    model = rt.load_model(runtime_paths, device="cuda")
+    tracker.update("load", 1.0)
+    with instrument(rt, tracker, infer_cfg, total, start):
+        rt.run_inference(model, args.input, args.output_dir, infer_cfg, writer_cfg,
+                         initial_hint_path=args.hint_first_frame, hint_video_path=args.hint_video)
+    outputs = collect_outputs(rt, args, total, start)
+    tracker.finish("write")
+    for item in outputs:
+        emit(item)
+    done = {"event": "done", "outputs": outputs, "seconds": round(time.monotonic() - started, 1)}
+    emit(done)
+    return done

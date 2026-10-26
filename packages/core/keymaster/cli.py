@@ -31,6 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
     key.add_argument("--despill", type=float, default=0.5)
     key.add_argument("--format", choices=("exr", "video"), default="exr")
     key.add_argument("--outputs", nargs="+", default=["alpha", "fg", "cutout"], choices=OUTPUT_KINDS)
+    key.add_argument("--start-frame", type=int, default=0)
     key.add_argument("--frames", type=int, default=0)
     key.add_argument("--low-vram", action="store_true")
     for name in ("doctor", "setup"):
@@ -68,8 +69,9 @@ def cmd_key(args, emitter: Emitter) -> int:
 
 def cmd_doctor(args, emitter: Emitter) -> int:
     from .doctor import run_doctor
-    emitter.emit(run_doctor())
-    return 0
+    report = run_doctor()
+    emitter.emit(report)
+    return 0 if report["ok"] else 1
 
 
 def cmd_setup(args, emitter: Emitter) -> int:
