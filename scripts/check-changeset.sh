@@ -18,5 +18,16 @@ for file in $added; do
     status=1
   fi
 done
+touched=$(git diff --name-only --diff-filter=AM "$BASE" "$HEAD" | grep -E '^\.changeset/[^/]+\.md$' | grep -v README.md || true)
+for file in $touched; do
+  if awk 'BEGIN{n=0} /^---$/{n++; next} n==1' "$file" | grep -Eq ':[[:space:]]*major[[:space:]]*$'; then
+    if [[ ",${LABELS:-}," != *",major-release,"* ]]; then
+      echo "::error file=$file::this changeset asks for a major version. Majors are deliberate releases: use minor or patch, or have the maintainer add the 'major-release' label to the PR"
+      status=1
+    else
+      echo "major bump approved by the major-release label: $file"
+    fi
+  fi
+done
 [ $status -eq 0 ] && { echo "changesets added:"; echo "$added"; }
 exit $status
