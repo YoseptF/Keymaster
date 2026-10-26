@@ -95,10 +95,11 @@ if (-not (Test-Path -LiteralPath $PythonW)) { $PythonW = $Python }
 $Launcher = Join-Path $AppDir "keymaster-app.bat"
 $bat = @(
     "@echo off",
+    "chcp 65001 >nul",
     "set ""PYTHONPATH=%~dp0;%PYTHONPATH%""",
     "start """" ""$PythonW"" -m keymaster_app %*"
 )
-Set-Content -LiteralPath $Launcher -Value $bat -Encoding ASCII
+[System.IO.File]::WriteAllLines($Launcher, [string[]]$bat, (New-Object System.Text.UTF8Encoding($false)))
 say "app.install.launcher" @{ path = $Launcher }
 
 $Programs = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs"
