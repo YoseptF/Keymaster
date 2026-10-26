@@ -111,6 +111,28 @@ class MainWindowSmokeTest(TempEnv):
         finally:
             window.close()
 
+    def test_drop_adds_clips(self) -> None:
+        from PySide6.QtCore import QMimeData, QPointF, Qt, QUrl
+        from PySide6.QtGui import QDropEvent
+        from keymaster_app.ui.main_window import MainWindow
+        window = MainWindow()
+        try:
+            self.assertTrue(window.acceptDrops())
+            self.assertFalse(window.tree.viewport().acceptDrops())
+            self.assertFalse(window.tree.acceptDrops())
+            frames = self.make_frames()
+            mime = QMimeData()
+            mime.setUrls([QUrl.fromLocalFile(str(self.make_video())), QUrl.fromLocalFile(str(frames))])
+            event = QDropEvent(QPointF(10, 10), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier)
+            window.dropEvent(event)
+            self.assertEqual([c.name for c in window.queue.clips], ["shot.mp4", "plate"])
+            self.assertEqual(window.tree.topLevelItemCount(), 2)
+            window.select_clip(window.queue.clips[1].id)
+            window.remove_selected()
+            self.assertEqual(window.tree.topLevelItemCount(), 1)
+        finally:
+            window.close()
+
     def test_setup_check(self) -> None:
         from keymaster_app.ui.main_window import MainWindow
         window = MainWindow()
