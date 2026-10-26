@@ -76,6 +76,14 @@ class MainWindowSmokeTest(TempEnv):
             self.assertEqual(data["language"], "es-419")
             window.set_language("en")
             self.assertEqual(window.start_button.text(), "Start")
+            self.assertEqual(window.language_combo.count(), 3)
+            self.assertEqual(window.language_combo.itemText(0), "System language")
+            window.set_language("auto")
+            data = json.loads(Path(os.environ["KEYMASTER_SETTINGS"]).read_text(encoding="utf-8"))
+            self.assertEqual(data["language"], "auto")
+            from keymaster_app import settings
+            from keymaster_app.i18n import current
+            self.assertEqual(current().language, settings.system_language())
         finally:
             window.close()
 

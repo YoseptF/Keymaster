@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -24,31 +25,80 @@ class SettingsTest(TempEnv):
             self.assertEqual(settings.settings_path(), self.tmp / "cfg" / "keymaster" / "settings.json")
 
     def test_missing_file_resolves_defaults(self) -> None:
-        resolved = settings.resolve()
+        os.environ["LANG"] = "en_US.UTF-8"
+        resolved = settings.resolve(use_qt=False)
         self.assertEqual(resolved.language, "en")
+        self.assertEqual(resolved.preference, "auto")
         self.assertEqual(resolved.python, sys.executable)
         self.assertIsNone(resolved.core)
         self.assertEqual(settings.core_problem(resolved), "core")
 
+    def stored(self) -> dict:
+        return json.loads(Path(os.environ["KEYMASTER_SETTINGS"]).read_text())
+
     def test_save_language_keeps_other_keys(self) -> None:
         Path(os.environ["KEYMASTER_SETTINGS"]).write_text(json.dumps({"python": "/x/python", "core": "/x/core"}))
         settings.save_language("es-419")
-        data = json.loads(Path(os.environ["KEYMASTER_SETTINGS"]).read_text())
-        self.assertEqual(data, {"python": "/x/python", "core": "/x/core", "language": "es-419"})
-        self.assertEqual(settings.resolve().language, "es-419")
+        self.assertEqual(self.stored(), {"python": "/x/python", "core": "/x/core", "language": "es-419"})
+        self.assertEqual(settings.resolve(use_qt=False).language, "es-419")
+        settings.save_language("auto")
+        self.assertEqual(self.stored()["language"], "auto")
+        settings.save_language("fr")
+        self.assertEqual(self.stored()["language"], "auto")
 
-    def test_unknown_language_falls_back_to_english(self) -> None:
+    def test_normalizing(self) -> None:
         self.assertEqual(settings.normalize_language("fr"), "en")
         self.assertEqual(settings.normalize_language(None), "en")
         self.assertEqual(settings.normalize_language("ES-419"), "es-419")
+        self.assertEqual(settings.normalize_preference(None), "auto")
+        self.assertEqual(settings.normalize_preference("fr"), "auto")
+        self.assertEqual(settings.normalize_preference("en"), "en")
+        for name, expected in (("es_MX.UTF-8", "es-419"), ("es", "es-419"), ("es-AR", "es-419"),
+                               ("en_US.UTF-8", "en"), ("C", "en"), ("pt_BR", "en"), (None, "en")):
+            self.assertEqual(settings.language_from_locale(name), expected, name)
+
+    def test_auto_follows_system_locale(self) -> None:
+        for value in (None, "auto"):
+            if value:
+                settings.save_language(value)
+            os.environ["LANG"] = "es_MX.UTF-8"
+            self.assertEqual(settings.resolve(use_qt=False).language, "es-419")
+            os.environ["LANG"] = "en_US.UTF-8"
+            self.assertEqual(settings.resolve(use_qt=False).language, "en")
+
+    def test_locale_variable_precedence(self) -> None:
+        os.environ["LANG"] = "en_US.UTF-8"
+        os.environ["LC_MESSAGES"] = "es_CO.UTF-8"
+        self.assertEqual(settings.system_language(use_qt=False), "es-419")
+        os.environ["LC_ALL"] = "en_GB.UTF-8"
+        self.assertEqual(settings.system_language(use_qt=False), "en")
+
+    def test_explicit_setting_beats_system(self) -> None:
+        os.environ["LANG"] = "es_MX.UTF-8"
+        settings.save_language("en")
+        self.assertEqual(settings.resolve(use_qt=False).language, "en")
 
     def test_environment_overrides_file(self) -> None:
         settings.save({"python": "/file/python", "core": "/file/core", "language": "en"})
         os.environ["KEYMASTER_PYTHON"] = "/env/python"
         os.environ["KEYMASTER_CORE"] = "/env/core"
         os.environ["KEYMASTER_LANGUAGE"] = "es-419"
-        resolved = settings.resolve()
+        resolved = settings.resolve(use_qt=False)
         self.assertEqual((resolved.python, resolved.core, resolved.language), ("/env/python", "/env/core", "es-419"))
+        self.assertEqual(resolved.preference, "en")
+        os.environ["KEYMASTER_LANGUAGE"] = "auto"
+        self.assertEqual(settings.resolve(use_qt=False).language, "en")
+
+    @unittest.skipIf(sys.platform == "win32", "reads POSIX locale variables")
+    def test_auto_in_a_fresh_process(self) -> None:
+        def resolved_language(lang: str) -> str:
+            env = {k: v for k, v in os.environ.items() if k not in ("LC_ALL", "LC_MESSAGES", "LANGUAGE")}
+            env.update({"LANG": lang, "PYTHONPATH": str(APP)})
+            code = "from keymaster_app import settings; print(settings.resolve().language)"
+            return subprocess.run([sys.executable, "-c", code], env=env, capture_output=True, text=True,
+                                  check=True).stdout.strip()
+        self.assertEqual(resolved_language("es_MX.UTF-8"), "es-419")
+        self.assertEqual(resolved_language("en_US.UTF-8"), "en")
 
     def test_fake_core_has_no_problem(self) -> None:
         self.use_fake_core()

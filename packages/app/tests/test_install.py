@@ -23,7 +23,8 @@ def pyside_version() -> str | None:
 @unittest.skipIf(sys.platform == "win32" or not shutil.which("bash"), "the Linux installer needs bash")
 class InstallScriptTest(TempEnv):
     def run_install(self, **extra: str) -> subprocess.CompletedProcess:
-        env = {k: v for k, v in os.environ.items() if not k.startswith("KEYMASTER_")}
+        env = {k: v for k, v in os.environ.items()
+               if not k.startswith("KEYMASTER_") and k not in ("LC_ALL", "LC_MESSAGES", "LANGUAGE")}
         env.update({
             "HOME": str(self.tmp / "home"),
             "XDG_CONFIG_HOME": str(self.tmp / "cfg"),
@@ -50,6 +51,17 @@ class InstallScriptTest(TempEnv):
         result = self.run_install(KEYMASTER_LANGUAGE="es-419")
         self.assertEqual(result.returncode, 1)
         self.assertIn("todavía no está instalado", result.stderr)
+
+    def test_auto_follows_system_locale(self) -> None:
+        self.assertIn("todavía no está instalado", self.run_install(LANG="es_MX.UTF-8").stderr)
+        self.assertIn("isn't installed yet", self.run_install(LANG="en_US.UTF-8").stderr)
+        self.write_settings(language="auto")
+        self.assertIn("todavía no está instalado", self.run_install(LANG="es_MX.UTF-8").stderr)
+
+    def test_explicit_language_wins(self) -> None:
+        self.write_settings(language="en")
+        self.assertIn("isn't installed yet", self.run_install(LANG="es_MX.UTF-8").stderr)
+        self.assertIn("todavía no está instalado", self.run_install(LANG="en_US.UTF-8", KEYMASTER_LANGUAGE="es-419").stderr)
 
     def test_bad_python(self) -> None:
         self.write_settings(language="en", python=str(self.tmp / "missing" / "python"), core=str(FAKE_CORE))

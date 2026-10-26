@@ -17,7 +17,8 @@ class TempEnv(unittest.TestCase):
         self.tmp = Path(tempfile.mkdtemp(prefix="keymaster-app-test-"))
         self._saved = {k: os.environ.get(k) for k in (
             "KEYMASTER_SETTINGS", "KEYMASTER_PYTHON", "KEYMASTER_CORE", "KEYMASTER_LANGUAGE",
-            "KEYMASTER_FAKE_FAIL", "KEYMASTER_FAKE_DELAY", "XDG_CONFIG_HOME")}
+            "KEYMASTER_FAKE_FAIL", "KEYMASTER_FAKE_DELAY", "XDG_CONFIG_HOME",
+            "LANG", "LC_ALL", "LC_MESSAGES", "LANGUAGE")}
         for key in self._saved:
             os.environ.pop(key, None)
         os.environ["KEYMASTER_SETTINGS"] = str(self.tmp / "settings.json")
