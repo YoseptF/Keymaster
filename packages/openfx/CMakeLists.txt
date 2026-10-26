@@ -32,6 +32,7 @@ set(VENDOR ${CMAKE_CURRENT_SOURCE_DIR}/vendor)
 
 add_library(km_miniz STATIC ${VENDOR}/miniz/miniz.c)
 target_include_directories(km_miniz PUBLIC ${VENDOR}/miniz)
+target_compile_definitions(km_miniz PUBLIC MINIZ_NO_ARCHIVE_APIS MINIZ_NO_STDIO MINIZ_NO_TIME)
 
 add_library(km_common STATIC
   src/paths.cpp
@@ -62,13 +63,14 @@ target_compile_definitions(Keymaster PRIVATE
 set_target_properties(Keymaster PROPERTIES PREFIX "" SUFFIX ".ofx" OUTPUT_NAME "Keymaster" CXX_VISIBILITY_PRESET default)
 
 if(WIN32)
-  target_link_options(Keymaster PRIVATE -static -static-libgcc -static-libstdc++)
+  target_link_options(Keymaster PRIVATE -static -static-libgcc -static-libstdc++ $<$<CONFIG:Release>:-s>)
 else()
   target_link_options(Keymaster PRIVATE
     -static-libgcc -static-libstdc++
     -Wl,--exclude-libs,ALL
     -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/cmake/exports.map
-    -Wl,--no-undefined)
+    -Wl,--no-undefined
+    $<$<CONFIG:Release>:-s>)
 endif()
 
 set(KM_BUNDLE ${CMAKE_BINARY_DIR}/Keymaster.ofx.bundle)
