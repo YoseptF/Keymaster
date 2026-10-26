@@ -41,13 +41,14 @@ PR links them and is updated on every push. They are kept 14 days.
 
 ## Bump rules
 
-| Bump | Means for Keymaster | Examples |
+| Bump | Means for Keymaster | Who decides |
 |---|---|---|
-| major | someone relying on us must change something | removed option, changed output layout or file names, new minimum host version, settings format change |
-| minor | new capability, nothing existing changes | new option, new output, new host version supported |
-| patch | same behaviour, better | bug fix, wording, speed, translation fix |
+| major (`1.0.0`, `2.0.0`) | an event: a deliberate release, usually with breaking changes (removed option, changed output layout or file names, settings format change, new minimum host version) | the maintainer only: CI refuses a major changeset unless the PR has the `major-release` label |
+| minor (`1.x.0`) | anything new: options, outputs, hosts, behaviour changes that break nobody | whoever writes the change |
+| patch (`1.x.y`) | same behaviour, better: fixes, wording, speed, translations | whoever writes the change |
 
-Unsure? Round up.
+Between minor and patch, either is fine. A breaking change without a planned major waits, or goes
+behind an option, until the maintainer schedules the major.
 
 ## Releasing
 

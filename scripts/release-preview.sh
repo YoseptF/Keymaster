@@ -8,7 +8,11 @@ for pkg in packages/*/package.json; do
   dir=$(dirname "$pkg"); name=$(jq -r .name "$pkg"); new=$(jq -r .version "$pkg"); old=${before[$pkg]}
   [ "$new" = "$old" ] && continue
   bumped=1
-  echo "### $name $old → $new"
+  if [ "${new%%.*}" != "${old%%.*}" ]; then
+    echo "### $name $old → $new (**MAJOR release**)"
+  else
+    echo "### $name $old → $new"
+  fi
   awk -v v="## $new" 'BEGIN{p=0} $0==v{p=1;next} /^## /{if(p)exit} p' "$dir/CHANGELOG.md"
   echo
 done
