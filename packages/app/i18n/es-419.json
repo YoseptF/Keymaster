@@ -39,7 +39,7 @@
   "app.output.fg_tip": "Los colores del sujeto sin el reflejo verde",
   "app.output.cutout": "Recorte (RGBA)",
   "app.output.cutout_tip": "Primer plano con transparencia, listo para componer",
-  "app.output.checker": "Vista sobre cuadrícula",
+  "app.output.checker": "Cuadrícula",
   "app.output.checker_tip": "El recorte sobre una cuadrícula, para revisarlo rápido",
   "app.format.exr": "Secuencia de imágenes EXR",
   "app.format.video": "Archivos de video",

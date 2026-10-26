@@ -123,7 +123,6 @@ class SetupCheckDialog(QDialog):
     def _render(self) -> None:
         self._clear_checks()
         self.checks_card.setVisible(False)
-        self.status.setObjectName("")
         if self.problem == "core":
             self.status.setText(t("app.setup.core_missing"))
         elif self.problem == "python":
@@ -150,5 +149,4 @@ class SetupCheckDialog(QDialog):
                     self.checks_layout.addWidget(message, row, 1)
                 self.checks_card.setVisible(bool(checks))
                 self.status.setText(t("app.setup.all_ok") if report.get("ok") else t("app.setup.some_missing"))
-        self.status.style().unpolish(self.status)
-        self.status.style().polish(self.status)
+        self.adjustSize()

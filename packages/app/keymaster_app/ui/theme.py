@@ -3,6 +3,10 @@ from __future__ import annotations
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication
 
+from keymaster_app import PACKAGE_DIR
+
+CHECK_ICON = (PACKAGE_DIR / "assets" / "check.svg").as_posix()
+
 ACCENT = "#36c46f"
 ACCENT_DARK = "#24944f"
 BASE = "#16181c"
@@ -26,13 +30,14 @@ QLabel#checkOk {{ color: {ACCENT}; font-weight: 600; }}
 QLabel#checkBad {{ color: {DANGER}; font-weight: 600; }}
 QPushButton {{ background: {RAISED}; border: 1px solid {BORDER}; border-radius: 7px; padding: 6px 14px; }}
 QPushButton:hover {{ border-color: {ACCENT}; }}
-QPushButton:disabled {{ color: {MUTED}; background: {SURFACE}; border-color: {SURFACE}; }}
+QPushButton:disabled {{ color: {MUTED}; background: transparent; border-color: {BORDER}; }}
 QPushButton#primary {{ background: {ACCENT}; color: #0b1a10; border: none; font-weight: 600; padding: 8px 22px; }}
 QPushButton#primary:hover {{ background: {ACCENT_DARK}; color: white; }}
 QPushButton#primary:disabled {{ background: {RAISED}; color: {MUTED}; }}
 QPushButton#danger {{ border-color: {DANGER}; }}
 QPushButton#danger:hover {{ background: {DANGER}; color: white; }}
-QTreeWidget, QLineEdit, QComboBox, QDoubleSpinBox, QListWidget {{
+QPushButton#danger:disabled {{ border-color: {BORDER}; background: transparent; }}
+QTreeWidget, QLineEdit, QComboBox {{
     background: {BASE}; border: 1px solid {BORDER}; border-radius: 7px; padding: 4px;
     selection-background-color: {ACCENT_DARK};
 }}
@@ -42,7 +47,12 @@ QProgressBar {{ background: {BASE}; border: 1px solid {BORDER}; border-radius: 6
 QProgressBar::chunk {{ background: {ACCENT}; border-radius: 5px; }}
 QSlider::groove:horizontal {{ height: 4px; background: {BORDER}; border-radius: 2px; }}
 QSlider::handle:horizontal {{ background: {ACCENT}; width: 14px; margin: -6px 0; border-radius: 7px; }}
-QCheckBox::indicator {{ width: 16px; height: 16px; }}
+QCheckBox {{ spacing: 8px; }}
+QCheckBox::indicator {{ width: 16px; height: 16px; border: 1px solid {MUTED}; border-radius: 4px; background: {BASE}; }}
+QCheckBox::indicator:hover {{ border-color: {ACCENT}; }}
+QCheckBox::indicator:checked {{ background: {ACCENT}; border-color: {ACCENT}; image: url("{CHECK_ICON}"); }}
+QCheckBox::indicator:disabled {{ border-color: {BORDER}; }}
+QCheckBox::indicator:checked:disabled {{ background: {ACCENT_DARK}; border-color: {ACCENT_DARK}; }}
 QToolTip {{ background: {RAISED}; color: {TEXT}; border: 1px solid {BORDER}; }}
 """
 

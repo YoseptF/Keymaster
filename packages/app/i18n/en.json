@@ -39,7 +39,7 @@
   "app.output.fg_tip": "The subject's colors with the green spill removed",
   "app.output.cutout": "Cutout (RGBA)",
   "app.output.cutout_tip": "Foreground with transparency, ready to composite",
-  "app.output.checker": "Checkerboard preview",
+  "app.output.checker": "Checkerboard",
   "app.output.checker_tip": "The cutout over a checkerboard, for a quick look",
   "app.format.exr": "EXR image sequence",
   "app.format.video": "Video files",

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices, QIcon
-from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog, QFrame,
+from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QFileDialog, QFrame,
                                QGridLayout, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMainWindow,
                                QProgressBar, QPushButton, QSlider, QSplitter, QStackedWidget, QTreeWidget,
                                QTreeWidgetItem, QVBoxLayout, QWidget)
@@ -38,6 +38,21 @@ def _card() -> tuple[QFrame, QVBoxLayout]:
     layout.setContentsMargins(14, 14, 14, 14)
     layout.setSpacing(10)
     return frame, layout
+
+
+def _slider(value: int) -> tuple[QSlider, QHBoxLayout]:
+    slider = QSlider(Qt.Horizontal)
+    slider.setRange(0, 100)
+    slider.setValue(value)
+    readout = QLabel()
+    readout.setText(f"{value / 100:.2f}")
+    readout.setMinimumWidth(36)
+    readout.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+    slider.valueChanged.connect(lambda v: readout.setText(f"{v / 100:.2f}"))
+    row = QHBoxLayout()
+    row.addWidget(slider, 1)
+    row.addWidget(readout)
+    return slider, row
 
 
 def _section() -> QLabel:
@@ -132,8 +147,17 @@ class MainWindow(QMainWindow):
 
     def _build_queue(self) -> QWidget:
         frame, layout = _card()
+        top = QHBoxLayout()
         self.queue_section = _section()
-        layout.addWidget(self.queue_section)
+        self.add_files_button = QPushButton()
+        self.add_files_button.clicked.connect(self.browse_files)
+        self.add_folder_button = QPushButton()
+        self.add_folder_button.clicked.connect(self.browse_folder)
+        top.addWidget(self.queue_section)
+        top.addStretch(1)
+        top.addWidget(self.add_files_button)
+        top.addWidget(self.add_folder_button)
+        layout.addLayout(top)
         self.queue_stack = QStackedWidget()
         self.drop_hint = QLabel()
         self.drop_hint.setObjectName("dropHint")
@@ -157,10 +181,6 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.queue_stack, 1)
 
         row = QHBoxLayout()
-        self.add_files_button = QPushButton()
-        self.add_files_button.clicked.connect(self.browse_files)
-        self.add_folder_button = QPushButton()
-        self.add_folder_button.clicked.connect(self.browse_folder)
         self.hint_button = QPushButton()
         self.hint_button.clicked.connect(self.browse_hint)
         self.clear_hint_button = QPushButton()
@@ -169,7 +189,7 @@ class MainWindow(QMainWindow):
         self.remove_button.clicked.connect(self.remove_selected)
         self.clear_done_button = QPushButton()
         self.clear_done_button.clicked.connect(self.clear_finished)
-        for button in (self.add_files_button, self.add_folder_button, self.hint_button, self.clear_hint_button):
+        for button in (self.hint_button, self.clear_hint_button):
             row.addWidget(button)
         row.addStretch(1)
         row.addWidget(self.remove_button)
@@ -190,31 +210,19 @@ class MainWindow(QMainWindow):
         grid.setHorizontalSpacing(12)
         grid.setVerticalSpacing(10)
         self.quality_label = QLabel()
-        self.quality_spin = QDoubleSpinBox()
-        self.quality_spin.setRange(0.0, 1.0)
-        self.quality_spin.setSingleStep(0.01)
-        self.quality_spin.setDecimals(2)
-        self.quality_spin.setValue(0.95)
+        self.quality_slider, quality_row = _slider(95)
         grid.addWidget(self.quality_label, 0, 0)
-        grid.addWidget(self.quality_spin, 0, 1)
+        grid.addLayout(quality_row, 0, 1)
 
         self.despill_label = QLabel()
-        despill_row = QHBoxLayout()
-        self.despill_slider = QSlider(Qt.Horizontal)
-        self.despill_slider.setRange(0, 100)
-        self.despill_slider.setValue(50)
-        self.despill_value = QLabel()
-        self.despill_value.setMinimumWidth(36)
-        self.despill_slider.valueChanged.connect(lambda v: self.despill_value.setText(f"{v / 100:.2f}"))
-        self.despill_value.setText(f"{self.despill_slider.value() / 100:.2f}")
-        despill_row.addWidget(self.despill_slider, 1)
-        despill_row.addWidget(self.despill_value)
+        self.despill_slider, despill_row = _slider(50)
         grid.addWidget(self.despill_label, 1, 0)
         grid.addLayout(despill_row, 1, 1)
 
         self.outputs_label = QLabel()
         outputs_row = QGridLayout()
         self.output_checks: dict[str, QCheckBox] = {}
+        outputs_row.setVerticalSpacing(6)
         for index, kind in enumerate(OUTPUT_KINDS):
             box = QCheckBox()
             box.setChecked(kind != "checker")
@@ -259,7 +267,7 @@ class MainWindow(QMainWindow):
         preview_layout.addWidget(self.preview, 1)
         preview_layout.addWidget(self.open_folder_button, 0, Qt.AlignRight)
         column.addWidget(preview_frame, 1)
-        self.option_widgets = [self.quality_spin, self.despill_slider, self.format_combo, self.low_vram_check,
+        self.option_widgets = [self.quality_slider, self.despill_slider, self.format_combo, self.low_vram_check,
                                self.folder_edit, self.folder_button, *self.output_checks.values()]
         return side
 
@@ -284,7 +292,7 @@ class MainWindow(QMainWindow):
         self.clear_done_button.setText(t("app.queue.clear_done"))
         self.options_section.setText(t("app.options.section"))
         self.quality_label.setText(t("app.options.hint_quality"))
-        self.quality_spin.setToolTip(t("app.options.hint_quality_tip"))
+        self.quality_slider.setToolTip(t("app.options.hint_quality_tip"))
         self.despill_label.setText(t("app.options.despill"))
         self.despill_slider.setToolTip(t("app.options.despill_tip"))
         self.outputs_label.setText(t("app.options.outputs"))
@@ -329,7 +337,7 @@ class MainWindow(QMainWindow):
     def options(self) -> KeyOptions:
         folder = self.folder_edit.text().strip()
         return KeyOptions(
-            hint_quality=self.quality_spin.value(),
+            hint_quality=self.quality_slider.value() / 100,
             despill=self.despill_slider.value() / 100,
             outputs=tuple(k for k, box in self.output_checks.items() if box.isChecked()),
             format=self.format_combo.currentData(),
