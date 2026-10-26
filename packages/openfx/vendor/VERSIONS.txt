@@ -1,0 +1,5 @@
+openfx      OFX_Release_1.5.1   https://github.com/AcademySoftwareFoundation/openfx       BSD-3-Clause   openfx/LICENSE.md
+nlohmann    v3.12.0             https://github.com/nlohmann/json                          MIT            nlohmann/LICENSE.MIT
+tinyexr     v3.2.0 tinyexr.h    https://github.com/syoyo/tinyexr                          BSD-3-Clause   tinyexr/LICENSE
+miniz       tinyexr v3.2.0 deps https://github.com/syoyo/tinyexr/tree/v3.2.0/deps/miniz   MIT            miniz/LICENSE
+stb_image   003501f6d7a8        https://github.com/nothings/stb                           MIT or Unlicense (in stb/stb_image.h)
