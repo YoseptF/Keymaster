@@ -104,8 +104,11 @@ def main(argv=None, out=None) -> int:
     if real_process and json_mode and not (argv[:1] == ["settings"]):
         events = claim_stdout()
     emitter = Emitter(json_mode, stream=events)
+    previous_stdout = sys.stdout
     if real_process:
         install_signal_handlers()
+    else:
+        sys.stdout = sys.stderr
     try:
         args = build_parser().parse_args(argv)
         if args.command == "settings":
@@ -120,6 +123,8 @@ def main(argv=None, out=None) -> int:
         emitter.emit(error.event())
         return EXIT_CANCELLED if error.message_key == "core.error.cancelled" else 1
     finally:
+        if not real_process:
+            sys.stdout = previous_stdout
         try:
             events.flush()
         except (OSError, ValueError):
