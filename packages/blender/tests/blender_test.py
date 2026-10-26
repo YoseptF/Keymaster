@@ -85,28 +85,63 @@ def settings_file():
     return Path(os.environ["KEYMASTER_SETTINGS"])
 
 
+def panel_language(ui, i18n, en, es):
+    i18n.translator.invalidate()
+    texts = draw(ui.KEYMASTER_PT_panel)
+    if es["blender.key.label"] in texts:
+        return "es-419"
+    check(en["blender.key.label"] in texts, f"panel has no Key button: {texts}")
+    return "en"
+
+
 def test_language(ui, i18n):
     en = json.loads((Path(i18n.table_dirs()[0]) / "en.json").read_text(encoding="utf-8"))
     es = json.loads((Path(i18n.table_dirs()[0]) / "es-419.json").read_text(encoding="utf-8"))
-    prefs = bpy.context.preferences.addons[MODULE].preferences
-    prefs.language = "en"
-    check(json.loads(settings_file().read_text())["language"] == "en", "language en not written")
+    view = bpy.context.preferences.view
+    view.use_translate_interface = True
+    path = settings_file()
+    if path.exists():
+        path.unlink()
+    view.language = "es"
     texts = draw(ui.KEYMASTER_PT_panel)
-    check(en["blender.key.label"] in texts, f"English panel missing Key button: {texts}")
-    prefs.language = "es-419"
-    data = json.loads(settings_file().read_text())
-    check(data["language"] == "es-419", f"settings not updated: {data}")
-    check(prefs.language == "es-419", "preference does not read back es-419")
+    check(es["blender.key.label"] in texts, f"Spanish Blender did not give a Spanish panel on redraw: {texts}")
+    view.language = "en_US"
     texts = draw(ui.KEYMASTER_PT_panel)
-    check(es["blender.key.label"] in texts, f"Spanish panel missing Key button after switch: {texts}")
-    check(es["blender.prefs.language"] in draw(ui.KEYMASTER_preferences),
-          "Spanish preferences missing language label")
-    settings_file().write_text(json.dumps({**data, "language": "en"}))
-    time.sleep(i18n.REFRESH_SECONDS + 0.1)
-    texts = draw(ui.KEYMASTER_PT_panel)
-    check(en["blender.key.label"] in texts, f"external language change not picked up on redraw: {texts}")
-    check(prefs.language == "en", "preference does not follow the shared file")
-    print("ok language switch")
+    check(en["blender.key.label"] in texts, f"English Blender did not give an English panel on redraw: {texts}")
+    view.language = "es"
+    path.write_text(json.dumps({"language": "en"}))
+    check(panel_language(ui, i18n, en, es) == "en", "settings language does not beat Blender's")
+    path.write_text(json.dumps({"language": "auto"}))
+    check(panel_language(ui, i18n, en, es) == "es-419", "auto does not follow Blender")
+    os.environ["KEYMASTER_LANGUAGE"] = "en"
+    try:
+        check(panel_language(ui, i18n, en, es) == "en", "KEYMASTER_LANGUAGE does not win")
+    finally:
+        del os.environ["KEYMASTER_LANGUAGE"]
+    saved = os.environ.get("LC_ALL")
+    view.use_translate_interface = False
+    try:
+        os.environ["LC_ALL"] = "es_MX.UTF-8"
+        check(panel_language(ui, i18n, en, es) == "es-419", "translation off does not use the OS locale")
+        os.environ["LC_ALL"] = "en_US.UTF-8"
+        check(panel_language(ui, i18n, en, es) == "en", "translation off does not use the OS locale")
+        view.use_translate_interface = True
+        view.language = "DEFAULT"
+        os.environ["LC_ALL"] = "es_AR.UTF-8"
+        check(panel_language(ui, i18n, en, es) == "es-419", "DEFAULT does not use the OS locale")
+    finally:
+        if saved is None:
+            os.environ.pop("LC_ALL", None)
+        else:
+            os.environ["LC_ALL"] = saved
+        view.use_translate_interface = True
+        view.language = "en_US"
+    check(json.loads(path.read_text()) == {"language": "auto"}, "the add-on changed the settings file")
+    texts = draw(ui.KEYMASTER_preferences)
+    check(not any(text.startswith(("Language", "Idioma")) for text in texts), f"language option still shown: {texts}")
+    path.unlink()
+    i18n.translator.invalidate()
+    print("ok language follows Blender")
 
 
 def wait(ui, attr, timeout=30.0):

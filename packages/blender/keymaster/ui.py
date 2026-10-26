@@ -61,30 +61,24 @@ def format_items(self, context):
     ])
 
 
-def language_items(self, context):
-    return cached_items("language", [
-        ("en", t("blender.language.en"), "", 0),
-        ("es-419", t("blender.language.es_419"), "", 1),
-    ])
+def blender_locale() -> Optional[str]:
+    prefs = getattr(bpy.context, "preferences", None)
+    if prefs is None:
+        return None
+    view = prefs.view
+    if not view.use_translate_interface or view.language == "DEFAULT":
+        return None
+    locale = bpy.app.translations.locale
+    return None if not locale or locale == "DEFAULT" else locale
 
 
-def get_language(self) -> int:
-    return settings.LANGUAGES.index(settings.file_language())
-
-
-def set_language(self, value: int) -> None:
-    settings.set_language(settings.LANGUAGES[value])
-    translator.invalidate()
-    redraw(everything=True)
-
-
-def redraw(everything: bool = False) -> None:
+def redraw() -> None:
     wm = getattr(bpy.context, "window_manager", None)
     if wm is None:
         return
     for window in wm.windows:
         for area in window.screen.areas:
-            if everything or area.type in REDRAW_AREAS:
+            if area.type in REDRAW_AREAS:
                 area.tag_redraw()
 
 
@@ -428,11 +422,8 @@ class KEYMASTER_PT_panel(Panel):
 class KEYMASTER_preferences(AddonPreferences):
     bl_idname = ADDON
 
-    language: EnumProperty(items=language_items, get=get_language, set=set_language)
-
     def draw(self, context):
         layout = self.layout
-        layout.prop(self, "language", text=t("blender.prefs.language"), translate=False)
         resolved = settings.resolve()
         box = layout.box()
         missing = t("blender.prefs.not_set")
@@ -480,6 +471,8 @@ CLASSES = (KEYMASTER_OT_key, KEYMASTER_OT_cancel, KEYMASTER_OT_doctor, KEYMASTER
 
 def register():
     global KeymasterSceneSettings
+    translator.host_locale = blender_locale
+    translator.invalidate()
     KEYMASTER_OT_key.bl_label = t("blender.key.label")
     KEYMASTER_OT_cancel.bl_label = t("blender.cancel.label")
     KEYMASTER_OT_doctor.bl_label = t("blender.doctor.label")
@@ -507,3 +500,4 @@ def unregister():
     if KeymasterSceneSettings is not None:
         bpy.utils.unregister_class(KeymasterSceneSettings)
         KeymasterSceneSettings = None
+    translator.host_locale = None
