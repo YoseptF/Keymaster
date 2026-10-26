@@ -767,7 +767,7 @@ OfxStatus actionClipPreferences(OfxImageEffectHandle effect, OfxPropertySetHandl
     bool ready = mode != OutputSource && computeState(inst) == CacheState::Ready;
     if (ready) {
         gProp->propSetString(outArgs, kOfxImageEffectPropPreMultiplication, 0,
-                             mode == OutputForeground ? kOfxImageOpaque : kOfxImagePreMultiplied);
+                             mode == OutputCutout ? kOfxImagePreMultiplied : kOfxImageOpaque);
     } else {
         OfxPropertySetHandle props = nullptr;
         char* premult = nullptr;
@@ -856,7 +856,8 @@ OfxStatus actionRender(OfxImageEffectHandle effect, OfxPropertySetHandle inArgs)
                 out[2] = rgb[2] * a;
                 out[3] = a;
             } else if (mode == OutputAlpha) {
-                out[0] = out[1] = out[2] = out[3] = p[0];
+                out[0] = out[1] = out[2] = p[0];
+                out[3] = 1.0f;
             } else {
                 out[0] = rgb[0];
                 out[1] = rgb[1];

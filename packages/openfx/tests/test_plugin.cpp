@@ -541,7 +541,8 @@ int main() {
     auto alpha = render(plugin, *inst, 3.0);
     if (alpha.size() == (size_t)W * Hh * 4) {
         CHECK(near(alpha[0], a));
-        CHECK(near(alpha[3], a));
+        CHECK(near(alpha[2], a));
+        CHECK(near(alpha[3], 1.0f));
     }
     inst->params.find("output")->i = 2;
     auto fg = render(plugin, *inst, 1.0);
