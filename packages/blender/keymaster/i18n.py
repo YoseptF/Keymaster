@@ -40,13 +40,17 @@ def fill(text: str, params: Optional[dict]) -> str:
 
 
 class Translator:
-    def __init__(self, dirs: Optional[Iterable[Path]] = None, language: Optional[Callable[[], str]] = None,
-                 clock: Callable[[], float] = time.monotonic):
+    def __init__(self, dirs: Optional[Iterable[Path]] = None, configured: Optional[Callable[[], Optional[str]]] = None,
+                 system_locale: Optional[Callable[[], Optional[str]]] = None,
+                 host_locale: Optional[Callable[[], Optional[str]]] = None, clock: Callable[[], float] = time.monotonic):
         self._dirs = list(dirs) if dirs is not None else None
-        self._language_source = language or (lambda: settings.resolve().language)
+        self._configured_source = configured or settings.configured_language
+        self._system_source = system_locale or settings.os_locale
+        self.host_locale = host_locale
         self._clock = clock
         self._tables: Optional[dict[str, dict[str, str]]] = None
-        self._language = settings.DEFAULT_LANGUAGE
+        self._configured: Optional[str] = None
+        self._system: Optional[str] = None
         self._checked: Optional[float] = None
 
     @property
@@ -58,9 +62,13 @@ class Translator:
     def language(self) -> str:
         now = self._clock()
         if self._checked is None or now - self._checked >= REFRESH_SECONDS:
-            self._language = settings.normalize_language(self._language_source())
+            self._configured = self._configured_source()
+            self._system = self._system_source()
             self._checked = now
-        return self._language
+        if self._configured in settings.LANGUAGES:
+            return self._configured
+        host = self.host_locale() if self.host_locale is not None else None
+        return settings.language_from_locale(host or self._system)
 
     def invalidate(self) -> None:
         self._checked = None

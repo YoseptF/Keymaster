@@ -31,43 +31,69 @@ class Resolve(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
+    def env(self, **extra):
+        return {"KEYMASTER_SETTINGS": str(self.path), "LANG": "en_US.UTF-8", **extra}
+
     def test_missing_file(self):
-        r = settings.resolve({"KEYMASTER_SETTINGS": str(self.path)})
+        r = settings.resolve(self.env(), "linux")
         self.assertEqual((r.python, r.core, r.language, r.path), (None, None, "en", self.path))
 
-    def test_file_values(self):
-        self.path.write_text(json.dumps({"python": "/py", "core": "/core", "language": "es-419"}))
-        r = settings.resolve({"KEYMASTER_SETTINGS": str(self.path)})
-        self.assertEqual((r.python, r.core, r.language), ("/py", "/core", "es-419"))
+    def test_paths_from_file_and_env(self):
+        self.path.write_text(json.dumps({"python": "/py", "core": "/core"}))
+        r = settings.resolve(self.env(), "linux")
+        self.assertEqual((r.python, r.core), ("/py", "/core"))
+        r = settings.resolve(self.env(KEYMASTER_PYTHON="/py2", KEYMASTER_CORE="/core2"), "linux")
+        self.assertEqual((r.python, r.core), ("/py2", "/core2"))
 
-    def test_env_wins(self):
-        self.path.write_text(json.dumps({"python": "/py", "core": "/core", "language": "es-419"}))
-        r = settings.resolve({"KEYMASTER_SETTINGS": str(self.path), "KEYMASTER_PYTHON": "/py2",
-                              "KEYMASTER_CORE": "/core2", "KEYMASTER_LANGUAGE": "en"})
-        self.assertEqual((r.python, r.core, r.language), ("/py2", "/core2", "en"))
+    def test_language_order(self):
+        def lang(file_value=None, env_value=None, locale=None, os_lang="en_US.UTF-8"):
+            if file_value is None:
+                self.path.write_text("{}")
+            else:
+                self.path.write_text(json.dumps({"language": file_value}))
+            extra = {"LANG": os_lang}
+            if env_value is not None:
+                extra["KEYMASTER_LANGUAGE"] = env_value
+            return settings.resolve(self.env(**extra), "linux", locale=locale).language
 
-    def test_unknown_language_and_garbage(self):
-        self.path.write_text(json.dumps({"language": "fr"}))
-        self.assertEqual(settings.resolve({"KEYMASTER_SETTINGS": str(self.path)}).language, "en")
+        self.assertEqual(lang(file_value="en", env_value="es-419", locale="en_US"), "es-419")
+        self.assertEqual(lang(file_value="en", locale="es"), "en")
+        self.assertEqual(lang(file_value="es-419", locale="en_US"), "es-419")
+        self.assertEqual(lang(file_value="auto", locale="es"), "es-419")
+        self.assertEqual(lang(locale="es"), "es-419")
+        self.assertEqual(lang(file_value="fr", locale="es"), "es-419")
+        self.assertEqual(lang(env_value="auto", file_value="auto", locale="en_US", os_lang="es_MX.UTF-8"), "en")
+        self.assertEqual(lang(os_lang="es_MX.UTF-8"), "es-419")
+        self.assertEqual(lang(os_lang="de_DE.UTF-8"), "en")
+        self.assertEqual(lang(locale="fr_FR"), "en")
+
+    def test_never_writes(self):
+        self.path.write_text(json.dumps({"language": "auto"}))
+        before = self.path.read_text()
+        settings.resolve(self.env(), "linux", locale="es")
+        settings.configured_language(self.env(), "linux")
+        self.assertEqual(self.path.read_text(), before)
+
+    def test_garbage_file(self):
         self.path.write_text("not json")
-        self.assertEqual(settings.resolve({"KEYMASTER_SETTINGS": str(self.path)}).language, "en")
+        self.assertIsNone(settings.configured_language(self.env(), "linux"))
         self.path.write_text("[]")
         self.assertEqual(settings.read(self.path), {})
 
-    def test_set_language_keeps_other_keys(self):
-        self.path.write_text(json.dumps({"python": "/py", "core": "/core"}))
-        env = {"KEYMASTER_SETTINGS": str(self.path)}
-        settings.set_language("es-419", env)
-        self.assertEqual(json.loads(self.path.read_text()), {"python": "/py", "core": "/core", "language": "es-419"})
-        self.assertEqual(settings.file_language(env), "es-419")
-        settings.set_language("xx", env)
-        self.assertEqual(settings.file_language(env), "en")
-        self.assertEqual([p.name for p in self.path.parent.iterdir()], ["settings.json"])
 
-    def test_set_language_creates_folders(self):
-        nested = Path(self.tmp.name) / "a" / "b" / "settings.json"
-        settings.set_language("es-419", {"KEYMASTER_SETTINGS": str(nested)})
-        self.assertEqual(json.loads(nested.read_text()), {"language": "es-419"})
+class Locales(unittest.TestCase):
+    def test_language_from_locale(self):
+        for name in ("es", "es_MX", "es_ES.UTF-8", "es-419", "Spanish_Mexico", "ES"):
+            self.assertEqual(settings.language_from_locale(name), "es-419", name)
+        for name in (None, "", "en_US", "en_GB", "fr_FR", "C", "eo", "pt_BR"):
+            self.assertEqual(settings.language_from_locale(name), "en", name)
+
+    def test_os_locale_env_order(self):
+        env = {"LC_ALL": "", "LC_MESSAGES": "es_AR.UTF-8", "LANG": "en_US.UTF-8"}
+        self.assertEqual(settings.os_locale(env, "linux"), "es_AR.UTF-8")
+        self.assertEqual(settings.os_locale({"LC_ALL": "C", "LANG": "es_CO"}, "linux"), "es_CO")
+        self.assertEqual(settings.os_locale({"LANGUAGE": "es_MX:en"}, "linux"), "es_MX")
+        self.assertEqual(settings.os_locale({"LC_ALL": "fr_FR"}, "linux"), "fr_FR")
 
 
 if __name__ == "__main__":

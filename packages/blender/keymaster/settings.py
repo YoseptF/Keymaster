@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import json
+import locale as pylocale
 import os
 import sys
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping, Optional
 
 LANGUAGES = ("en", "es-419")
 DEFAULT_LANGUAGE = "en"
+AUTO = "auto"
 
 
 @dataclass(frozen=True)
@@ -40,45 +41,53 @@ def read(path: Path) -> dict:
     return data if isinstance(data, dict) else {}
 
 
-def write_value(path: Path, key: str, value) -> dict:
-    path = Path(path)
-    data = read(path)
-    data[key] = value
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(prefix=".settings-", suffix=".json", dir=str(path.parent))
+def configured_language(env: Optional[Mapping[str, str]] = None, platform: Optional[str] = None) -> Optional[str]:
+    env = os.environ if env is None else env
+    if env.get("KEYMASTER_LANGUAGE") in LANGUAGES:
+        return env["KEYMASTER_LANGUAGE"]
+    value = read(settings_path(env, platform)).get("language", AUTO)
+    return value if value in LANGUAGES else None
+
+
+def language_from_locale(name: Optional[str]) -> str:
+    name = (name or "").strip().lower()
+    return "es-419" if name.startswith(("es", "spanish")) else DEFAULT_LANGUAGE
+
+
+def windows_locale() -> Optional[str]:
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump(data, handle, indent=2)
-            handle.write("\n")
-        os.replace(tmp, path)
-    except BaseException:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        raise
-    return data
+        import ctypes
+        buffer = ctypes.create_unicode_buffer(85)
+        if ctypes.windll.kernel32.GetUserDefaultLocaleName(buffer, len(buffer)):
+            return buffer.value
+    except (AttributeError, OSError, ImportError):
+        pass
+    return None
 
 
-def normalize_language(value) -> str:
-    return value if value in LANGUAGES else DEFAULT_LANGUAGE
+def os_locale(env: Optional[Mapping[str, str]] = None, platform: Optional[str] = None) -> Optional[str]:
+    env = os.environ if env is None else env
+    platform = sys.platform if platform is None else platform
+    if platform == "win32":
+        found = windows_locale()
+        if found:
+            return found
+    for var in ("LC_ALL", "LC_MESSAGES", "LANG", "LANGUAGE"):
+        value = (env.get(var) or "").split(":")[0]
+        if value and value not in ("C", "POSIX") and not value.startswith(("C.", "POSIX.")):
+            return value
+    try:
+        return pylocale.getlocale()[0]
+    except (ValueError, TypeError):
+        return None
 
 
-def resolve(env: Optional[Mapping[str, str]] = None, platform: Optional[str] = None) -> Resolved:
+def resolve(env: Optional[Mapping[str, str]] = None, platform: Optional[str] = None,
+            locale: Optional[str] = None) -> Resolved:
     env = os.environ if env is None else env
     path = settings_path(env, platform)
     data = read(path)
     python = env.get("KEYMASTER_PYTHON") or data.get("python") or None
     core = env.get("KEYMASTER_CORE") or data.get("core") or None
-    language = normalize_language(env.get("KEYMASTER_LANGUAGE") or data.get("language"))
+    language = configured_language(env, platform) or language_from_locale(locale or os_locale(env, platform))
     return Resolved(python=python, core=core, language=language, path=path)
-
-
-def file_language(env: Optional[Mapping[str, str]] = None, platform: Optional[str] = None) -> str:
-    return normalize_language(read(settings_path(env, platform)).get("language"))
-
-
-def set_language(language: str, env: Optional[Mapping[str, str]] = None, platform: Optional[str] = None) -> Path:
-    path = settings_path(env, platform)
-    write_value(path, "language", normalize_language(language))
-    return path

@@ -39,9 +39,9 @@ class Tables(unittest.TestCase):
             self.assertEqual(set(re.findall(r"\{(\w+)\}", en[key])), set(re.findall(r"\{(\w+)\}", es[key])), key)
 
     def test_loads_real_tables(self):
-        tr = i18n.Translator(language=lambda: "es-419")
+        tr = i18n.Translator(configured=lambda: "es-419")
         self.assertEqual(tr("blender.cancel.label"), "Cancelar")
-        self.assertEqual(i18n.Translator(language=lambda: "en")("blender.cancel.label"), "Cancel")
+        self.assertEqual(i18n.Translator(configured=lambda: "en")("blender.cancel.label"), "Cancel")
 
 
 class Translate(unittest.TestCase):
@@ -54,8 +54,11 @@ class Translate(unittest.TestCase):
         write(base / "core", "es-419", {"core.error.x": "Roto {what}"})
         self.dirs = [base / "host", base / "core"]
         self.language = "en"
+        self.system = None
+        self.host = None
         self.clock = Clock()
-        self.tr = i18n.Translator(self.dirs, language=lambda: self.language, clock=self.clock)
+        self.tr = i18n.Translator(self.dirs, configured=lambda: self.language, system_locale=lambda: self.system,
+                                  host_locale=lambda: self.host, clock=self.clock)
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -90,6 +93,25 @@ class Translate(unittest.TestCase):
 
     def test_unknown_language_falls_back(self):
         self.language = "fr"
+        self.assertEqual(self.tr("blender.a", name="x"), "Hello x")
+
+    def test_host_locale_applies_on_the_next_call(self):
+        self.language = None
+        self.host = "es"
+        self.assertEqual(self.tr("blender.a", name="x"), "Hola x")
+        self.host = "en_US"
+        self.assertEqual(self.tr("blender.a", name="x"), "Hello x")
+
+    def test_system_locale_when_host_has_none(self):
+        self.language = None
+        self.system = "es_MX.UTF-8"
+        self.assertEqual(self.tr("blender.a", name="x"), "Hola x")
+        self.host = "fr_FR"
+        self.assertEqual(self.tr("blender.a", name="x"), "Hello x")
+
+    def test_configured_language_beats_host(self):
+        self.language = "en"
+        self.host = "es"
         self.assertEqual(self.tr("blender.a", name="x"), "Hello x")
 
 
