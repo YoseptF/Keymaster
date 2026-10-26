@@ -127,7 +127,10 @@ def cmd_doctor(args) -> int:
                "dependency_missing": "torch"}.get(os.environ.get("KEYMASTER_FAKE_FAIL", ""), None)
     if os.environ.get("KEYMASTER_FAKE_FAIL") and failing is None:
         failing = "gpu"
-    checks = [{"id": i, "ok": i != failing, "message_key": f"core.doctor.{i}_{'missing' if i == failing else 'ok'}", "params": {}}
+    params = {"gpu": {"name": "Fake GPU", "memory": 24.0}, "ffmpeg": {"path": "/usr/bin/ffmpeg"},
+              "weights": {"path": str(Path(__file__).resolve().parents[1] / "upstream")}, "torch": {"version": "2.9.1", "cuda": "12.8"}}
+    checks = [{"id": i, "ok": i != failing, "message_key": f"core.doctor.{i}_{'missing' if i == failing else 'ok'}",
+               "params": ({"missing": "corridorkey"} if i == "weights" else {}) if i == failing else params[i]}
               for i in ("gpu", "ffmpeg", "weights", "torch")]
     ok = failing is None
     emit({"event": "doctor", "ok": ok, "checks": checks})
