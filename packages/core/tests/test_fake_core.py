@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from unittest import mock
 
 from keymaster import cli, paths
 
@@ -81,12 +82,14 @@ class FakeCoreParityTest(CoreCase):
         _, fake_setup = self.run_fake("setup", "--json")
         self.assertEqual({e["phase"] for e in fake_setup if e["event"] == "progress"}, {"download"})
         self.assertEqual(fake_setup[-1]["event"], "done")
-        env = {"KEYMASTER_LANGUAGE": "es-419"}
-        proc = subprocess.run([sys.executable, "-m", "keymaster", "settings", "get", "--json"], cwd=FAKE_ROOT,
-                              env=dict(os.environ, **env), capture_output=True, text=True, timeout=60)
-        os.environ.update(env)
-        _, mine = self.run_cli("settings", "get", "--json")
-        self.assertEqual(json.loads(proc.stdout), json.loads(mine))
+        for stored, env in ((None, {"KEYMASTER_LANGUAGE": "es-419"}), ("auto", {"LANG": "es_MX.UTF-8"}),
+                            ("en", {"LANG": "es_MX.UTF-8"}), ("fr", {"LC_ALL": "es_CL"}), (None, {"LANG": "C"})):
+            Path(os.environ["KEYMASTER_SETTINGS"]).write_text(json.dumps({"language": stored} if stored else {}))
+            proc = subprocess.run([sys.executable, "-m", "keymaster", "settings", "get", "--json"], cwd=FAKE_ROOT,
+                                  env=dict(os.environ, **env), capture_output=True, text=True, timeout=60)
+            with mock.patch.dict(os.environ, env):
+                _, mine = self.run_cli("settings", "get", "--json")
+            self.assertEqual(json.loads(proc.stdout), json.loads(mine), (stored, env))
 
     def test_fake_keys_exist_in_core_tables(self):
         table = json.loads((paths.I18N_DIR / "en.json").read_text())

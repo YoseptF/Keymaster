@@ -17,7 +17,9 @@ class CoreCase(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="keymaster-test-"))
         self.addCleanup(self.cleanup)
-        env = {k: v for k, v in os.environ.items() if not k.startswith("KEYMASTER_")}
+        env = {k: v for k, v in os.environ.items()
+               if not k.startswith("KEYMASTER_") and k not in ("LC_ALL", "LC_MESSAGES", "LANG")}
+        env["LANG"] = "en_US.UTF-8"
         env["KEYMASTER_SETTINGS"] = str(self.tmp / "settings.json")
         patcher = mock.patch.dict(os.environ, env, clear=True)
         patcher.start()

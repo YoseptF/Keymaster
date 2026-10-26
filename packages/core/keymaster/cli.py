@@ -88,9 +88,9 @@ def cmd_settings(args, emitter: Emitter, out) -> int:
     if args.key not in settings.KEYS or args.value is None:
         raise KeymasterError(message_key="core.error.invalid_setting", params={"key": args.key or "", "value": args.value or ""},
                              detail=f"settings set needs one of {', '.join(settings.KEYS)} and a value")
-    if args.key == "language" and args.value not in settings.LANGUAGES:
+    if args.key == "language" and args.value not in settings.LANGUAGE_CHOICES:
         raise KeymasterError(message_key="core.error.invalid_setting", params={"key": args.key, "value": args.value},
-                             detail=f"language must be one of {', '.join(settings.LANGUAGES)}")
+                             detail=f"language must be one of {', '.join(settings.LANGUAGE_CHOICES)}")
     data = settings.update({args.key: args.value})
     out.write(json.dumps(data, ensure_ascii=False) + "\n")
     return 0

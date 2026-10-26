@@ -6,9 +6,10 @@ import sys
 from pathlib import Path
 
 LANGUAGES = ("en", "es-419")
+LANGUAGE_CHOICES = ("auto",) + LANGUAGES
 DEFAULT_LANGUAGE = "en"
 KEYS = ("language", "python", "core")
-ENV_OVERRIDES = (("python", "KEYMASTER_PYTHON"), ("core", "KEYMASTER_CORE"), ("language", "KEYMASTER_LANGUAGE"))
+ENV_OVERRIDES = (("python", "KEYMASTER_PYTHON"), ("core", "KEYMASTER_CORE"))
 
 
 def settings_path(env=None, platform: str | None = None) -> Path:
@@ -23,8 +24,44 @@ def settings_path(env=None, platform: str | None = None) -> Path:
     return Path(base) / "keymaster" / "settings.json"
 
 
+def map_locale(value) -> str:
+    return "es-419" if str(value or "").strip().lower().startswith("es") else DEFAULT_LANGUAGE
+
+
 def normalize_language(value) -> str:
-    return value if value in LANGUAGES else DEFAULT_LANGUAGE
+    return value if value in LANGUAGES else map_locale(value)
+
+
+def windows_ui_locale() -> str:
+    try:
+        import ctypes
+        import locale
+        lang_id = ctypes.windll.kernel32.GetUserDefaultUILanguage()
+        return locale.windows_locale.get(lang_id, "")
+    except Exception:
+        return ""
+
+
+def os_ui_locale(env=None, platform: str | None = None) -> str:
+    env = os.environ if env is None else env
+    platform = platform or sys.platform
+    if platform == "win32":
+        return windows_ui_locale()
+    for var in ("LC_ALL", "LC_MESSAGES", "LANG"):
+        value = env.get(var, "")
+        if value and value not in ("C", "POSIX") and not value.startswith("C."):
+            return value
+    return ""
+
+
+def resolve_language(stored=None, env=None, platform: str | None = None) -> str:
+    env = os.environ if env is None else env
+    override = env.get("KEYMASTER_LANGUAGE", "")
+    if override and override != "auto":
+        return normalize_language(override)
+    if stored in LANGUAGES:
+        return stored
+    return map_locale(os_ui_locale(env, platform))
 
 
 def read_file(path: Path) -> dict:
@@ -41,7 +78,7 @@ def effective(env=None) -> dict:
     for key, var in ENV_OVERRIDES:
         if env.get(var):
             data[key] = env[var]
-    data["language"] = normalize_language(data.get("language"))
+    data["language"] = resolve_language(data.get("language"), env)
     return data
 
 

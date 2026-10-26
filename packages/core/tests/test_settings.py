@@ -26,6 +26,29 @@ class SettingsPathTest(CoreCase):
                          Path("/s.json"))
 
 
+class LanguageResolutionTest(CoreCase):
+    def test_order(self):
+        resolve = settings.resolve_language
+        self.assertEqual(resolve(None, {"LANG": "es_AR.UTF-8"}, "linux"), "es-419")
+        self.assertEqual(resolve(None, {"LANG": "de_DE.UTF-8"}, "linux"), "en")
+        self.assertEqual(resolve(None, {}, "linux"), "en")
+        self.assertEqual(resolve(None, {"LANG": "C.UTF-8"}, "linux"), "en")
+        self.assertEqual(resolve(None, {"LANG": "en_US", "LC_MESSAGES": "es_ES"}, "linux"), "es-419")
+        self.assertEqual(resolve(None, {"LC_ALL": "en_GB", "LC_MESSAGES": "es_ES"}, "linux"), "en")
+        self.assertEqual(resolve("en", {"LANG": "es_MX"}, "linux"), "en")
+        self.assertEqual(resolve("auto", {"LANG": "es_MX"}, "linux"), "es-419")
+        self.assertEqual(resolve("en", {"KEYMASTER_LANGUAGE": "es-419"}, "linux"), "es-419")
+        self.assertEqual(resolve("es-419", {"KEYMASTER_LANGUAGE": "es_CO"}, "linux"), "es-419")
+        self.assertEqual(resolve("es-419", {"KEYMASTER_LANGUAGE": "en"}, "linux"), "en")
+        self.assertEqual(resolve("es-419", {"KEYMASTER_LANGUAGE": "auto", "LANG": "en_US"}, "linux"), "es-419")
+
+    def test_windows_uses_ui_language(self):
+        with mock.patch.object(settings, "windows_ui_locale", return_value="es_MX"):
+            self.assertEqual(settings.resolve_language(None, {"LANG": "en_US"}, "win32"), "es-419")
+        with mock.patch.object(settings, "windows_ui_locale", return_value="en_US"):
+            self.assertEqual(settings.resolve_language(None, {}, "win32"), "en")
+
+
 class SettingsCommandTest(CoreCase):
     def test_defaults_when_missing(self):
         code, text = self.run_cli("settings", "get", "--json")
@@ -47,10 +70,19 @@ class SettingsCommandTest(CoreCase):
         stored = json.loads(Path(os.environ["KEYMASTER_SETTINGS"]).read_text())
         self.assertEqual(stored, {"python": "/p", "extra": 1, "core": "/c"})
 
-    def test_unknown_language_reads_as_english(self):
-        Path(os.environ["KEYMASTER_SETTINGS"]).write_text(json.dumps({"language": "fr"}))
-        _, text = self.run_cli("settings", "get", "language", "--json")
-        self.assertEqual(json.loads(text), "en")
+    def test_unknown_or_auto_language_follows_the_os(self):
+        for stored in ("fr", "auto", None):
+            Path(os.environ["KEYMASTER_SETTINGS"]).write_text(json.dumps({"language": stored} if stored else {}))
+            _, text = self.run_cli("settings", "get", "language", "--json")
+            self.assertEqual(json.loads(text), "en")
+            with mock.patch.dict(os.environ, {"LANG": "es_MX.UTF-8"}):
+                _, text = self.run_cli("settings", "get", "language", "--json")
+            self.assertEqual(json.loads(text), "es-419")
+
+    def test_set_auto(self):
+        code, text = self.run_cli("settings", "set", "language", "auto", "--json")
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(text)["language"], "auto")
 
     def test_corrupt_file_reads_as_defaults(self):
         Path(os.environ["KEYMASTER_SETTINGS"]).write_text("{not json")
@@ -59,7 +91,8 @@ class SettingsCommandTest(CoreCase):
 
     def test_env_overrides(self):
         Path(os.environ["KEYMASTER_SETTINGS"]).write_text(json.dumps({"language": "en", "python": "/file", "core": "/filecore"}))
-        with mock.patch.dict(os.environ, {"KEYMASTER_LANGUAGE": "es-419", "KEYMASTER_PYTHON": "/env", "KEYMASTER_CORE": "/envcore"}):
+        with mock.patch.dict(os.environ, {"KEYMASTER_LANGUAGE": "es-419", "KEYMASTER_PYTHON": "/env",
+                                          "KEYMASTER_CORE": "/envcore", "LANG": "en_US"}):
             _, text = self.run_cli("settings", "get", "--json")
         self.assertEqual(json.loads(text), {"language": "es-419", "python": "/env", "core": "/envcore"})
 

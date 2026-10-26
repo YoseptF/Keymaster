@@ -45,13 +45,38 @@ def read_settings() -> dict:
     return data if isinstance(data, dict) else {}
 
 
+def os_ui_locale() -> str:
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            import locale
+            return locale.windows_locale.get(ctypes.windll.kernel32.GetUserDefaultUILanguage(), "")
+        except Exception:
+            return ""
+    for var in ("LC_ALL", "LC_MESSAGES", "LANG"):
+        value = os.environ.get(var, "")
+        if value and value not in ("C", "POSIX") and not value.startswith("C."):
+            return value
+    return ""
+
+
+def resolve_language(stored) -> str:
+    override = os.environ.get("KEYMASTER_LANGUAGE", "")
+    if override and override != "auto":
+        source = override
+    elif stored in ("en", "es-419"):
+        return stored
+    else:
+        source = os_ui_locale()
+    return "es-419" if source.strip().lower().startswith("es") else "en"
+
+
 def effective_settings() -> dict:
     data = read_settings()
-    for key, var in (("python", "KEYMASTER_PYTHON"), ("core", "KEYMASTER_CORE"), ("language", "KEYMASTER_LANGUAGE")):
+    for key, var in (("python", "KEYMASTER_PYTHON"), ("core", "KEYMASTER_CORE")):
         if os.environ.get(var):
             data[key] = os.environ[var]
-    if data.get("language") not in ("en", "es-419"):
-        data["language"] = "en"
+    data["language"] = resolve_language(data.get("language"))
     return data
 
 
@@ -125,7 +150,7 @@ def cmd_settings(args) -> int:
         print(json.dumps(data.get(args.key) if args.key else data))
         return 0
     if args.key not in ("language", "python", "core") or args.value is None or (
-            args.key == "language" and args.value not in ("en", "es-419")):
+            args.key == "language" and args.value not in ("auto", "en", "es-419")):
         emit({"event": "error", "message_key": "core.error.invalid_setting",
               "params": {"key": args.key or "", "value": args.value or ""}, "detail": "fake invalid setting"})
         return 1
