@@ -230,7 +230,11 @@ class RepoTest(TempDirTest):
         push_sha = git(repo, "rev-parse", "HEAD")
         state = self.tmp / "gh"
         state.mkdir()
-        (state / "pulls.json").write_text(json.dumps({pr_sha: [{"number": 12, "html_url": "https://x/pull/12", "user": {"login": "ana"}}]}))
+        (state / "pulls.json").write_text(json.dumps({pr_sha: [
+            {"number": 15, "html_url": "https://x/pull/15", "user": {"login": "bot"}, "merged_at": None},
+            {"number": 30, "html_url": "https://x/pull/30", "user": {"login": "lee"}, "merged_at": "2026-01-02T00:00:00Z"},
+            {"number": 12, "html_url": "https://x/pull/12", "user": {"login": "ana"}, "merged_at": "2026-01-01T00:00:00Z"},
+        ]}))
         env = {"KEYMASTER_GH": f"{sys.executable} {GH_STUB}", "GH_STUB_DIR": str(state), "GITHUB_REPOSITORY": "o/r"}
         with mock.patch.dict(os.environ, env):
             found = release.links(repo, release.read_changesets(repo, ["pushed", "via-pr"]) + [cs(release.BUNDLE_ID, {})])

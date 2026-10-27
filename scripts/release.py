@@ -215,7 +215,7 @@ def links(root: Path, changesets: list[Changeset], rev: str = "HEAD") -> dict[st
             continue
         if sha not in asked:
             asked[sha] = json.loads(gh(root, "api", f"repos/{repo_name()}/commits/{sha}/pulls") or "[]")
-        pulls = asked[sha]
+        pulls = sorted(asked[sha], key=lambda pr: (not pr.get("merged_at"), pr["number"]))
         if pulls:
             pr = pulls[0]
             found[cs.id] = {"pr": pr["number"], "url": pr["html_url"], "user": (pr.get("user") or {}).get("login", "")}
