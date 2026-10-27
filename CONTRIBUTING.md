@@ -101,12 +101,15 @@ Nothing people download is built or uploaded by hand.
 - Where it is published: PR and `main` builds as workflow artifacts, release candidates as
   pre-releases (`scripts/release.py cut-publish`, only the files the build job of the same run
   produced), releases by promoting a candidate (`scripts/release.py promote`, only that candidate's
-  own files, checked against its `SHA256SUMS`). Both refuse to run outside GitHub Actions.
+  own files, checked against its `SHA256SUMS`). Every push and every release change in
+  `scripts/release.py` refuses to run outside GitHub Actions.
 - Local builds (`bun run build`, a package's `build.py`) are for testing only. Never upload them.
 - To add a release file, make a package's `build.py` write it into `--out`. Nothing else is needed:
   CI builds, collects and publishes it.
 - The release scripts are tested in `scripts/tests` (`bun run test`), including a dry run of both
-  workflows against a throwaway repository and a fake `gh`.
+  workflows against a throwaway repository and a fake `gh`. They opt in with
+  `KEYMASTER_RELEASE_TEST=1`, which only works when `origin` is a local path and `KEYMASTER_GH`
+  points at a stand-in for `gh`.
 
 ### Leftovers from the old flow
 
