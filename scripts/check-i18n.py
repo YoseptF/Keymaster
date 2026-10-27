@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGES = ROOT / "packages"
 LANGS = ("en", "es-419")
-CODE_SUFFIXES = {".py", ".js", ".jsx", ".mjs", ".html", ".cpp", ".h", ".hpp", ".sh", ".ps1"}
+CODE_SUFFIXES = {".py", ".js", ".jsx", ".mjs", ".html", ".cpp", ".h", ".hpp", ".sh", ".ps1", ".nsi", ".nsh"}
 SKIP_DIRS = {"node_modules", "__pycache__", "tests", "testing", "upstream", "build", "dist", ".venv", "venv"}
 SKIP_FILES = {"build.py"}
 
@@ -20,6 +20,7 @@ KEY_USES = [
     re.compile(r"""data-i18n(?:-[a-z]+)?=""" + KEY),
     re.compile(r"""\bmessage_key["']?\s*[:=]\s*""" + KEY),
     re.compile(r"""\b(?:say|msg)\s+""" + KEY),
+    re.compile(r"""\$\(\s*([a-z0-9_]+(?:\.[a-z0-9_]+)+)\s*\)"""),
 ]
 PLACEHOLDER = re.compile(r"\{([a-zA-Z0-9_]+)\}")
 WORDY = r"""["'][^"'\n]*[A-Za-z]{2}[^"'\n]*["']"""
@@ -52,6 +53,13 @@ HARDCODED = {
         re.compile(r"""\b(?:confirm|prompt)\(\s*""" + WORDY),
         re.compile(r"""\bnew\s+Window\(\s*["'][^"']*["']\s*,\s*""" + WORDY),
         re.compile(r"""\.add\(\s*["'](?:statictext|button|checkbox|radiobutton|panel|edittext)["']\s*,\s*(?:\[[^\]]*\]|[^,()\[]*)\s*,\s*""" + WORDY),
+    ],
+    ".nsi": [
+        re.compile(r"""^\s*(?:DetailPrint|Caption|SubCaption|ComponentText|DirText|LicenseText|UninstallText|UninstallCaption|CompletedText|SpaceTexts)\s+["'](?!\$)[^"'\n]*[A-Za-z]{2}""", re.M),
+        re.compile(r"""^\s*MessageBox\s+\S+\s+["'](?!\$)[^"'\n]*[A-Za-z]{2}""", re.M),
+        re.compile(r"""^\s*Section\s+(?:/o\s+)?["'](?!!?\$)(?!-)(?!Uninstall["'])(?!un\.)[^"'\n]*[A-Za-z]{2}""", re.M),
+        re.compile(r"""^\s*SectionSetText\s+\S+\s+["'](?!\$)[^"'\n]*[A-Za-z]{2}""", re.M),
+        re.compile(r"""^\s*!define\s+MUI_[A-Z_]*(?:TEXT|TITLE)[A-Z_]*\s+["'](?!\$)[^"'\n]*[A-Za-z]{2}""", re.M),
     ],
     ".html": [
         re.compile(r""">\s*[^<>{}\s][^<>{}]*[A-Za-z]{2}[^<>{}]*<"""),
