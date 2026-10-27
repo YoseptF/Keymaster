@@ -109,3 +109,39 @@ class SettingsCommandTest(CoreCase):
         self.assertIn("/x", t("core.error.input_unreadable", {"path": "/x"}, lang="es-419"))
         with mock.patch.dict(os.environ, {"KEYMASTER_LANGUAGE": "es-419"}):
             self.assertEqual(t("core.error.cancelled"), "Cancelado.")
+
+
+class FfmpegSettingTest(CoreCase):
+    def make_ffmpeg(self) -> Path:
+        tool = self.tmp / "bundled" / "bin" / ("ffmpeg.exe" if os.name == "nt" else "ffmpeg")
+        tool.parent.mkdir(parents=True)
+        tool.write_text("")
+        return tool
+
+    def test_set_ffmpeg_is_stored(self):
+        code, text = self.run_cli("settings", "set", "ffmpeg", "/opt/ff/ffmpeg", "--json")
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(text)["ffmpeg"], "/opt/ff/ffmpeg")
+
+    def test_configured_ffmpeg_folder_goes_first_on_path(self):
+        tool = self.make_ffmpeg()
+        Path(os.environ["KEYMASTER_SETTINGS"]).write_text(json.dumps({"ffmpeg": str(tool)}))
+        env = {"KEYMASTER_SETTINGS": os.environ["KEYMASTER_SETTINGS"], "PATH": os.pathsep.join(["/a", "/b"])}
+        self.assertEqual(settings.add_ffmpeg_to_path(env), str(tool.parent.resolve()))
+        self.assertEqual(env["PATH"].split(os.pathsep), [str(tool.parent.resolve()), "/a", "/b"])
+        settings.add_ffmpeg_to_path(env)
+        self.assertEqual(env["PATH"].split(os.pathsep).count(str(tool.parent.resolve())), 1)
+
+    def test_missing_or_absent_ffmpeg_leaves_path_alone(self):
+        for stored in ({}, {"ffmpeg": str(self.tmp / "nope" / "ffmpeg")}, {"ffmpeg": 3}):
+            Path(os.environ["KEYMASTER_SETTINGS"]).write_text(json.dumps(stored))
+            env = {"KEYMASTER_SETTINGS": os.environ["KEYMASTER_SETTINGS"], "PATH": "/a"}
+            self.assertIsNone(settings.add_ffmpeg_to_path(env))
+            self.assertEqual(env["PATH"], "/a")
+
+    def test_commands_see_the_configured_ffmpeg(self):
+        tool = self.make_ffmpeg()
+        Path(os.environ["KEYMASTER_SETTINGS"]).write_text(json.dumps({"ffmpeg": str(tool)}))
+        with mock.patch("keymaster.doctor.run_doctor", return_value={"event": "doctor", "ok": True, "checks": []}):
+            self.run_cli("doctor", "--json")
+        self.assertEqual(os.environ["PATH"].split(os.pathsep)[0], str(tool.parent.resolve()))

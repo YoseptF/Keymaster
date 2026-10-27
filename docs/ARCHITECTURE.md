@@ -43,7 +43,9 @@ language control:
       "language": "auto"
     }
 
-`python` and `core` are written by `setup`. `language` is optional (see Language). Writers keep
+`python` and `core` are written by `setup`. `language` is optional (see Language). `ffmpeg` is
+optional: the absolute path of an ffmpeg executable (the one-click installer writes it when it
+downloads its own); the core puts that folder first on its `PATH`. Writers keep
 keys they do not know. Environment overrides, in priority order over the file: `KEYMASTER_PYTHON`,
 `KEYMASTER_CORE`, `KEYMASTER_LANGUAGE` (see Language), and `KEYMASTER_SETTINGS` (path of the
 file itself).
@@ -187,7 +189,7 @@ at fraction 1.0; the fraction follows the bytes downloaded. Needs network the fi
 `settings get [key]` prints the effective settings object, or one value, as one JSON line: the
 file merged with `KEYMASTER_PYTHON`/`KEYMASTER_CORE`, and `language` resolved per Language (always
 `en` or `es-419`). `settings set <key> <value>` accepts `language` (`auto`, `en`, `es-419`),
-`python` and `core`, writes the file and prints the stored file contents; anything else is
+`python`, `core` and `ffmpeg`, writes the file and prints the stored file contents; anything else is
 `core.error.invalid_setting`.
 
 ## Installing the core

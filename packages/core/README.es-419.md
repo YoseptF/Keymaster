@@ -62,4 +62,7 @@ progreso y los resultados se muestran como texto en tu idioma. Los mensajes sigu
 sistema, a menos que elijas uno con `settings set language en|es-419` (o `auto` para volver a
 seguir el sistema).
 
+Para usar un ffmpeg que no está en tu PATH, ejecuta `settings set ffmpeg /ruta/a/ffmpeg`; el core
+pone su carpeta primero en el PATH que usa.
+
 Presiona Ctrl-C para cancelar: el core se detiene de forma ordenada y borra sus archivos temporales.
