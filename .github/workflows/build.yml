@@ -31,12 +31,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Install the C++ and Windows cross toolchains
+      - name: Install the C++ and Windows cross toolchains and NSIS
         run: |
           need=""
           command -v cmake >/dev/null || need="$need cmake"
           command -v g++ >/dev/null || need="$need g++"
           command -v x86_64-w64-mingw32-g++-posix >/dev/null || need="$need mingw-w64"
+          command -v makensis >/dev/null || need="$need nsis"
           if [ -n "$need" ]; then
             sudo=""
             [ "$(id -u)" -eq 0 ] || sudo=sudo

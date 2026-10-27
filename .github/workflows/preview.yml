@@ -32,7 +32,7 @@ jobs:
         with:
           script: |
             const marker = '<!-- preview-builds -->'
-            const body = `${marker}\nBuilds for this PR, from ${process.env.SHA.slice(0, 7)}: [download them from the run](${process.env.RUN}#artifacts) (kept 14 days). \`keymaster-linux\` has the Linux and platform-independent packages, \`keymaster-windows\` the Windows ones. Install \`keymaster-core\` first, then the host you are testing.`
+            const body = `${marker}\nBuilds for this PR, from ${process.env.SHA.slice(0, 7)}: [download them from the run](${process.env.RUN}#artifacts) (kept 14 days). To test, download \`keymaster-installer-…-windows.exe\` from \`keymaster-windows\` or \`keymaster-installer-…-linux.sh\` from \`keymaster-linux\` and run it: it installs the core and the hosts you have. The per-package zips in the same artifacts are for advanced users.`
             const { owner, repo } = context.repo
             const issue_number = context.issue.number
             const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number })

@@ -8,7 +8,7 @@ from pathlib import Path
 LANGUAGES = ("en", "es-419")
 LANGUAGE_CHOICES = ("auto",) + LANGUAGES
 DEFAULT_LANGUAGE = "en"
-KEYS = ("language", "python", "core")
+KEYS = ("language", "python", "core", "ffmpeg")
 ENV_OVERRIDES = (("python", "KEYMASTER_PYTHON"), ("core", "KEYMASTER_CORE"))
 
 
@@ -96,3 +96,15 @@ def update(values: dict, env=None) -> dict:
     data.update(values)
     write_file(path, data)
     return data
+
+
+def add_ffmpeg_to_path(env=None) -> str | None:
+    env = os.environ if env is None else env
+    configured = read_file(settings_path(env)).get("ffmpeg")
+    if not isinstance(configured, str) or not Path(configured).is_file():
+        return None
+    folder = str(Path(configured).resolve().parent)
+    parts = env.get("PATH", "").split(os.pathsep)
+    if folder not in parts:
+        env["PATH"] = os.pathsep.join([folder] + [p for p in parts if p])
+    return folder

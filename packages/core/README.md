@@ -62,4 +62,7 @@ is described in `docs/ARCHITECTURE.md` at the root of the repository. Without it
 results are printed as text in your language. Messages follow your system language unless you set
 one with `settings set language en|es-419` (or `auto` to follow the system again).
 
+To use an ffmpeg that is not on your PATH, run `settings set ffmpeg /path/to/ffmpeg`; the core
+puts its folder first on the PATH it uses.
+
 Press Ctrl-C to cancel: the core stops cleanly and removes its temporary files.

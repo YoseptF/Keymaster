@@ -152,7 +152,7 @@ def cmd_settings(args) -> int:
         data = effective_settings()
         print(json.dumps(data.get(args.key) if args.key else data))
         return 0
-    if args.key not in ("language", "python", "core") or args.value is None or (
+    if args.key not in ("language", "python", "core", "ffmpeg") or args.value is None or (
             args.key == "language" and args.value not in ("auto", "en", "es-419")):
         emit({"event": "error", "message_key": "core.error.invalid_setting",
               "params": {"key": args.key or "", "value": args.value or ""}, "detail": "fake invalid setting"})

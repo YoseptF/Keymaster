@@ -113,6 +113,7 @@ def main(argv=None, out=None) -> int:
         args = build_parser().parse_args(argv)
         if args.command == "settings":
             return cmd_settings(args, emitter, events)
+        settings.add_ffmpeg_to_path()
         return {"key": cmd_key, "doctor": cmd_doctor, "setup": cmd_setup}[args.command](args, emitter)
     except BaseException as exc:
         if isinstance(exc, SystemExit):

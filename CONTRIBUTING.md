@@ -65,6 +65,22 @@ Nobody chooses a version number and nobody publishes from a laptop. If `release`
 meantime, Actions opens a "Sync the version commit into release" PR instead; merge it before the
 next release.
 
+## Releases are built by CI only
+
+Nothing people download is built or uploaded by hand.
+
+- What builds it: the Build workflow (`.github/workflows/build.yml`) runs `scripts/package.py`,
+  which runs every package's `build.py`, including the one-click installers in
+  `packages/installer`. The workflow installs the tools it needs (CMake, MinGW, NSIS) itself.
+- Where it runs: on the local-ci self-hosted runner (`vars.CI_RUNNER`), never by hand.
+- Where it is published: PR builds as workflow artifacts linked from the PR, merges into
+  `release` as the `staging` pre-release (`scripts/staging-release.sh`), merges into `main` as
+  versioned releases (`scripts/github-releases.sh`). Both scripts publish only the files the build
+  job of the same workflow run produced, and refuse to run outside GitHub Actions.
+- Local builds (`bun run build`, a package's `build.py`) are for testing only. Never upload them.
+- To add a release file, make a package's `build.py` write it into `--out`. Nothing else is needed:
+  CI builds, collects and publishes it.
+
 ## Commit messages
 
 One line, natural language, no type prefixes, no trailers, no tool attribution.
