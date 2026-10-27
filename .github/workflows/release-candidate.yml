@@ -1,0 +1,82 @@
+name: Cut release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or commit to build the release candidate from
+        type: string
+        default: main
+
+concurrency: release
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Work out the versions
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    outputs:
+      sha: ${{ steps.plan.outputs.sha }}
+      tag: ${{ steps.plan.outputs.tag }}
+      versions: ${{ steps.plan.outputs.versions }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - id: plan
+        run: python scripts/release.py cut-prepare --out tmp/release-plan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-plan
+          path: tmp/release-plan/
+          retention-days: 3
+
+  build:
+    needs: prepare
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ needs.prepare.outputs.sha }}
+      versions: ${{ needs.prepare.outputs.versions }}
+      retention-days: 3
+
+  publish:
+    name: Tag and publish the pre-release
+    needs: [prepare, build]
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: keymaster-*
+          path: tmp/release-dist
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-plan
+          path: tmp/release-plan
+      - run: python scripts/release.py cut-publish --plan tmp/release-plan --dist tmp/release-dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
