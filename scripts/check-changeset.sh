@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-BASE=${BASE_SHA:-$(git merge-base HEAD origin/release)}
+BASE=${BASE_SHA:-$(git merge-base HEAD origin/main)}
 HEAD=${HEAD_SHA:-HEAD}
 changed=$(git diff --name-only "$BASE" "$HEAD")
 if ! grep -Eq '^packages/[^/]+/' <<<"$changed"; then echo "no package changed, no changeset needed"; exit 0; fi
