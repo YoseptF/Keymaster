@@ -12,14 +12,18 @@ on:
       retention-days:
         type: number
         default: 14
+      versions:
+        type: string
+        default: ""
 
 jobs:
   linux:
-    name: Build for Linux
+    name: Build every package
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     outputs:
       url: ${{ steps.upload.outputs.artifact-url }}
+      windows-url: ${{ steps.upload-windows.outputs.artifact-url }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,42 +34,39 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: python scripts/package.py --platform linux --suffix "${{ inputs.suffix }}"
+      - name: Install the C++ and Windows cross toolchains and NSIS
+        run: |
+          need=""
+          command -v cmake >/dev/null || need="$need cmake"
+          command -v g++ >/dev/null || need="$need g++"
+          command -v x86_64-w64-mingw32-g++-posix >/dev/null || need="$need mingw-w64"
+          command -v makensis >/dev/null || need="$need nsis"
+          if [ -n "$need" ]; then
+            sudo=""
+            [ "$(id -u)" -eq 0 ] || sudo=sudo
+            $sudo apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive $sudo apt-get install -y -qq $need
+          fi
+      - name: Stamp the release versions
+        if: inputs.versions != ''
+        run: python scripts/release.py stamp "$VERSIONS"
+        env:
+          VERSIONS: ${{ inputs.versions }}
+      - run: python scripts/package.py --platform all --suffix="${{ inputs.suffix }}"
       - id: upload
         uses: actions/upload-artifact@v4
         with:
           name: keymaster-linux
-          path: dist/
+          path: |
+            dist/
+            !dist/*-windows.*
           retention-days: ${{ inputs.retention-days }}
           overwrite: true
-
-  windows:
-    name: Build for Windows
-    runs-on: windows-latest
-    timeout-minutes: 30
-    outputs:
-      url: ${{ steps.upload.outputs.artifact-url }}
-      built: ${{ steps.build.outputs.built }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - id: build
-        shell: bash
-        run: |
-          python scripts/package.py --platform windows --suffix "${{ inputs.suffix }}"
-          if ls dist/* >/dev/null 2>&1; then echo "built=true" >> "$GITHUB_OUTPUT"; else echo "built=false" >> "$GITHUB_OUTPUT"; fi
-      - id: upload
-        if: steps.build.outputs.built == 'true'
+      - id: upload-windows
         uses: actions/upload-artifact@v4
         with:
           name: keymaster-windows
-          path: dist/
+          path: dist/*-windows.*
+          if-no-files-found: ignore
           retention-days: ${{ inputs.retention-days }}
           overwrite: true

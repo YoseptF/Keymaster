@@ -9,8 +9,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGES = ROOT / "packages"
 LANGS = ("en", "es-419")
-CODE_SUFFIXES = {".py", ".js", ".jsx", ".mjs", ".html", ".cpp", ".h", ".hpp"}
-SKIP_DIRS = {"node_modules", "__pycache__", "tests", "testing", "upstream", "build", "dist"}
+CODE_SUFFIXES = {".py", ".js", ".jsx", ".mjs", ".html", ".cpp", ".h", ".hpp", ".sh", ".ps1", ".nsi", ".nsh"}
+SKIP_DIRS = {"node_modules", "__pycache__", "tests", "testing", "upstream", "build", "dist", ".venv", "venv"}
 SKIP_FILES = {"build.py"}
 
 KEY = r"""["']([a-z0-9_]+(?:\.[a-z0-9_]+)+)["']"""
@@ -19,6 +19,8 @@ KEY_USES = [
     re.compile(r"""\btr\(\s*""" + KEY),
     re.compile(r"""data-i18n(?:-[a-z]+)?=""" + KEY),
     re.compile(r"""\bmessage_key["']?\s*[:=]\s*""" + KEY),
+    re.compile(r"""\b(?:say|msg)\s+""" + KEY),
+    re.compile(r"""\$\(\s*([a-z0-9_]+(?:\.[a-z0-9_]+)+)\s*\)"""),
 ]
 PLACEHOLDER = re.compile(r"\{([a-zA-Z0-9_]+)\}")
 WORDY = r"""["'][^"'\n]*[A-Za-z]{2}[^"'\n]*["']"""
@@ -29,22 +31,46 @@ HARDCODED = {
         re.compile(r"""\b(?:setText|setWindowTitle|setToolTip|setPlaceholderText|addItem|setStatusTip)\(\s*""" + WORDY),
         re.compile(r"""\bQ(?:Label|PushButton|CheckBox|GroupBox|Action|RadioButton)\(\s*""" + WORDY),
         re.compile(r"""\bQMessageBox\.\w+\([^)]*?""" + WORDY),
+        re.compile(r"""\b(?:setTitle|setHeaderLabels|setTabText|setItemText|setSuffix|setPrefix|setSpecialValueText|setInformativeText|setDetailedText|setLabelText|setWhatsThis)\(\s*\[?\s*""" + WORDY),
+        re.compile(r"""\b(?:setItemText|setTabText|insertItem|addTab)\(\s*[\w.]+\s*,\s*""" + WORDY),
+        re.compile(r"""\bQ(?:Menu|ListWidgetItem|TableWidgetItem|StandardItem|ToolButton|CommandLinkButton)\(\s*""" + WORDY),
+        re.compile(r"""\bQ(?:FileDialog\.get\w+|InputDialog\.get\w+)\(\s*[\w.]+\s*,\s*""" + WORDY),
         re.compile(r"""\bself\.report\(\s*\{[^}]*\}\s*,\s*""" + WORDY),
+        re.compile(r"""\b(?:bl_category|heading|confirm_text)\s*=\s*""" + WORDY),
+        re.compile(r"""\b(?:Bool|Int|Float|String|Enum|Pointer|Collection)(?:Vector)?Property\([^)]*?\bname\s*=\s*""" + WORDY),
+        re.compile(r"""\bitems\s*=\s*[\[(]\s*\(\s*["'][^"'\n]*["']\s*,\s*""" + WORDY),
+        re.compile(r"""\bpoll_message_set\(\s*""" + WORDY),
     ],
     ".js": [
         re.compile(r"""\.(?:textContent|innerText|title|placeholder)\s*=\s*["'`][^"'`\n]*[A-Za-z]{2}"""),
         re.compile(r"""\balert\(\s*""" + WORDY),
+        re.compile(r"""\b(?:confirm|prompt)\(\s*""" + WORDY),
+        re.compile(r"""\.innerHTML\s*=\s*["'`][^"'`\n]*[A-Za-z]{2}"""),
+        re.compile(r"""\.setAttribute\(\s*["'](?:title|placeholder|aria-label|alt)["']\s*,\s*""" + WORDY),
     ],
     ".jsx": [
         re.compile(r"""\balert\(\s*""" + WORDY),
+        re.compile(r"""\b(?:confirm|prompt)\(\s*""" + WORDY),
+        re.compile(r"""\bnew\s+Window\(\s*["'][^"']*["']\s*,\s*""" + WORDY),
+        re.compile(r"""\.add\(\s*["'](?:statictext|button|checkbox|radiobutton|panel|edittext)["']\s*,\s*(?:\[[^\]]*\]|[^,()\[]*)\s*,\s*""" + WORDY),
+    ],
+    ".nsi": [
+        re.compile(r"""^\s*(?:DetailPrint|Caption|SubCaption|ComponentText|DirText|LicenseText|UninstallText|UninstallCaption|CompletedText|SpaceTexts)\s+["'](?!\$)[^"'\n]*[A-Za-z]{2}""", re.M),
+        re.compile(r"""^\s*MessageBox\s+\S+\s+["'](?!\$)[^"'\n]*[A-Za-z]{2}""", re.M),
+        re.compile(r"""^\s*Section\s+(?:/o\s+)?["'](?!!?\$)(?!-)(?!Uninstall["'])(?!un\.)[^"'\n]*[A-Za-z]{2}""", re.M),
+        re.compile(r"""^\s*SectionSetText\s+\S+\s+["'](?!\$)[^"'\n]*[A-Za-z]{2}""", re.M),
+        re.compile(r"""^\s*!define\s+MUI_[A-Z_]*(?:TEXT|TITLE)[A-Z_]*\s+["'](?!\$)[^"'\n]*[A-Za-z]{2}""", re.M),
     ],
     ".html": [
         re.compile(r""">\s*[^<>{}\s][^<>{}]*[A-Za-z]{2}[^<>{}]*<"""),
-        re.compile(r"""\b(?:title|placeholder|aria-label)=["'][^"']*[A-Za-z]{2}[^"']*["']"""),
+        re.compile(r"""(?<![\w-])(?:title|placeholder|aria-label|alt)=["'][^"']*[A-Za-z]{2}[^"']*["']"""),
     ],
     ".cpp": [
         re.compile(r"""\bset(?:Label|Labels|Hint|ScriptName)\(\s*"[^"\n]*[A-Za-z]{2}"""),
         re.compile(r"""\bsendMessage\([^;]*?"[^"\n]*[A-Za-z]{2}"""),
+        re.compile(r"""\b(?:message|setPersistentMessage)\(\s*[^,;]+,\s*[^,;]+,\s*[^,;]+,\s*"[^"\n]*[A-Za-z]{2}"""),
+        re.compile(r"""\bpropSetString\(\s*[^,;]+,\s*(?:kOfxPropLabel|kOfxPropShortLabel|kOfxPropLongLabel|kOfxParamPropHint|kOfxParamPropChoiceOption|kOfxPropPluginDescription|kOfxImageEffectPluginPropGrouping)\s*,\s*[^,;]+,\s*"[^"\n]*[A-Za-z]{2}"""),
+        re.compile(r"""\bprogressStart\(\s*[^,;]+,\s*"[^"\n]*[A-Za-z]{2}"""),
     ],
 }
 
