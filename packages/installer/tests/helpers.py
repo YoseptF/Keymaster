@@ -101,6 +101,8 @@ def fake_downloads(dest: Path) -> dict[str, str]:
         tar.addfile(info, io.BytesIO(data))
     ffmpeg_gz = dest / "ffmpeg-linux-x64.gz"
     ffmpeg_gz.write_bytes(gzip.compress(b"#!/bin/sh\necho fake ffmpeg\n"))
+    license_file = dest / "linux-x64.LICENSE"
+    license_file.write_text("GNU GENERAL PUBLIC LICENSE\n")
     uv_zip = dest / "uv-x86_64-pc-windows-msvc.zip"
     with zipfile.ZipFile(uv_zip, "w") as zf:
         zf.writestr("uv.exe", b"MZ fake uv")
@@ -109,6 +111,8 @@ def fake_downloads(dest: Path) -> dict[str, str]:
         "KEYMASTER_INSTALLER_UV_SHA256": sha256(uv_tar),
         "KEYMASTER_INSTALLER_FFMPEG_URL": ffmpeg_gz.as_uri(),
         "KEYMASTER_INSTALLER_FFMPEG_SHA256": sha256(ffmpeg_gz),
+        "KEYMASTER_INSTALLER_FFMPEG_LICENSE_URL": license_file.as_uri(),
+        "KEYMASTER_INSTALLER_FFMPEG_LICENSE_SHA256": sha256(license_file),
         "uv_zip_url": uv_zip.as_uri(),
         "uv_zip_sha256": sha256(uv_zip),
     }

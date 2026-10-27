@@ -65,6 +65,8 @@ class LinuxInstallerTest(unittest.TestCase):
             "KEYMASTER_INSTALLER_UV_SHA256": WORKSPACE.downloads["KEYMASTER_INSTALLER_UV_SHA256"],
             "KEYMASTER_INSTALLER_FFMPEG_URL": WORKSPACE.downloads["KEYMASTER_INSTALLER_FFMPEG_URL"],
             "KEYMASTER_INSTALLER_FFMPEG_SHA256": WORKSPACE.downloads["KEYMASTER_INSTALLER_FFMPEG_SHA256"],
+            "KEYMASTER_INSTALLER_FFMPEG_LICENSE_URL": WORKSPACE.downloads["KEYMASTER_INSTALLER_FFMPEG_LICENSE_URL"],
+            "KEYMASTER_INSTALLER_FFMPEG_LICENSE_SHA256": WORKSPACE.downloads["KEYMASTER_INSTALLER_FFMPEG_LICENSE_SHA256"],
             "KEYMASTER_INSTALLER_SUDO": str(self.tmp / "no-sudo"),
             "KEYMASTER_INSTALLER_BLENDER": str(self.blender),
             "KEYMASTER_INSTALLER_OFX_HOSTS": "",
@@ -99,6 +101,7 @@ class LinuxInstallerTest(unittest.TestCase):
         self.assertTrue((self.prefix / "core" / "keymaster" / "cli.py").is_file())
         self.assertTrue((self.prefix / "bin" / "uv").is_file())
         self.assertEqual(subprocess.run([str(self.prefix / "ffmpeg" / "ffmpeg")], capture_output=True, text=True).stdout, "fake ffmpeg\n")
+        self.assertIn("GNU GENERAL PUBLIC LICENSE", (self.prefix / "ffmpeg" / "LICENSE").read_text())
         self.assertFalse((self.prefix / "cache").exists())
         log = self.log.read_text()
         wheel = self.prefix / "wheels" / "utils3d-1.7-py3-none-any.whl"

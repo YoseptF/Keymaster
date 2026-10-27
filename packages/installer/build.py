@@ -167,6 +167,8 @@ def linux_header(version: str, pins: dict) -> str:
         "KM_UV_SHA256": pins["uv"]["linux"]["sha256"],
         "KM_FFMPEG_URL": pins["ffmpeg"]["linux"]["url"],
         "KM_FFMPEG_SHA256": pins["ffmpeg"]["linux"]["sha256"],
+        "KM_FFMPEG_LICENSE_URL": pins["ffmpeg"]["linux"]["license_url"],
+        "KM_FFMPEG_LICENSE_SHA256": pins["ffmpeg"]["linux"]["license_sha256"],
     }
     return "#!/usr/bin/env bash\n" + generate.bash_vars(values) + generate.bash_messages(generate.load_tables()) + body
 

@@ -320,8 +320,10 @@ ensure_ffmpeg() {
   work="$(mktemp -d)"
   download "${KEYMASTER_INSTALLER_FFMPEG_URL:-$KM_FFMPEG_URL}" "$work/ffmpeg.gz" "${KEYMASTER_INSTALLER_FFMPEG_SHA256:-$KM_FFMPEG_SHA256}"
   mkdir -p "$PREFIX/ffmpeg"
+  download "${KEYMASTER_INSTALLER_FFMPEG_LICENSE_URL:-$KM_FFMPEG_LICENSE_URL}" "$work/LICENSE" "${KEYMASTER_INSTALLER_FFMPEG_LICENSE_SHA256:-$KM_FFMPEG_LICENSE_SHA256}"
   gunzip -c "$work/ffmpeg.gz" > "$FFMPEG_SETTING"
   chmod 755 "$FFMPEG_SETTING"
+  cp "$work/LICENSE" "$PREFIX/ffmpeg/LICENSE"
   rm -rf "$work"
 }
 
