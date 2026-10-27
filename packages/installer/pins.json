@@ -12,7 +12,7 @@
   },
   "ffmpeg": {
     "linux": {
-      "version": "6.1.1",
+      "version": "7.0.2",
       "license": "GPL-3.0-or-later",
       "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/ffmpeg-linux-x64.gz",
       "sha256": "bfe8a8fc511530457b528c48d77b5737527b504a3797a9bc4866aeca69c2dffa"

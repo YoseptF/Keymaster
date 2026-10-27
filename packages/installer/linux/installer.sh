@@ -102,10 +102,12 @@ payload_line() {
 
 download() {
   local url="$1" out="$2" sha="$3"
+  local quiet=-sS
+  [ "$INTERACTIVE" -eq 1 ] && quiet=--progress-bar
   if command -v curl >/dev/null 2>&1; then
-    curl -fL --retry 3 --progress-bar -o "$out" "$url" || { say "installer.error.download" >&2; exit 1; }
+    curl -fL --retry 3 "$quiet" -o "$out" "$url" || { say "installer.error.download" >&2; exit 1; }
   elif command -v wget >/dev/null 2>&1; then
-    wget -q --show-progress -O "$out" "$url" || { say "installer.error.download" >&2; exit 1; }
+    wget -q -O "$out" "$url" || { say "installer.error.download" >&2; exit 1; }
   else
     say "installer.error.no_download_tool" >&2
     exit 1
