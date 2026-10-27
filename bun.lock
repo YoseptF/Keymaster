@@ -25,6 +25,10 @@
       "name": "keymaster-core",
       "version": "0.0.0",
     },
+    "packages/installer": {
+      "name": "keymaster-installer",
+      "version": "0.0.0",
+    },
     "packages/openfx": {
       "name": "keymaster-openfx",
       "version": "0.0.0",
@@ -104,6 +108,8 @@
     "keymaster-blender": ["keymaster-blender@workspace:packages/blender"],
 
     "keymaster-core": ["keymaster-core@workspace:packages/core"],
+
+    "keymaster-installer": ["keymaster-installer@workspace:packages/installer"],
 
     "keymaster-openfx": ["keymaster-openfx@workspace:packages/openfx"],
 
