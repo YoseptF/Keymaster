@@ -11,7 +11,7 @@ frame on top of the original.
 1. Install the Keymaster core first and run its setup, so the models are downloaded and Keymaster
    knows where its Python lives.
 2. Download `keymaster-blender-<version>.zip` from the
-   [releases](https://github.com/YoseptF/Keymaster/releases). Don't unzip it.
+   [releases](https://github.com/YoseptF/Keymaster/releases/latest). Don't unzip it.
 3. In Blender, open Edit > Preferences > Get Extensions, open the menu at the top right and choose
    Install from Disk. Pick the zip.
 4. In the extension's preferences, press Check setup. Every line should have a check mark. The

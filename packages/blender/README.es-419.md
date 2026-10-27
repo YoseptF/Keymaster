@@ -11,7 +11,7 @@ tiempo, cuadro por cuadro encima del original.
 1. Primero instala el núcleo de Keymaster y corre su configuración, para que se descarguen los
    modelos y Keymaster sepa dónde está su Python.
 2. Descarga `keymaster-blender-<versión>.zip` de los
-   [releases](https://github.com/YoseptF/Keymaster/releases). No lo descomprimas.
+   [releases](https://github.com/YoseptF/Keymaster/releases/latest). No lo descomprimas.
 3. En Blender, abre Editar > Preferencias > Obtener extensiones, abre el menú de arriba a la
    derecha y elige Instalar desde disco. Selecciona el zip.
 4. En las preferencias de la extensión, presiona Revisar configuración. Cada línea debe tener una

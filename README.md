@@ -7,7 +7,7 @@ Blender, plus a standalone app.
 
 ## Install
 
-Download the installer from the [latest release](https://github.com/YoseptF/Keymaster/releases)
+Download the installer from the [latest release](https://github.com/YoseptF/Keymaster/releases/latest)
 and run it. It installs everything Keymaster needs (Python, PyTorch, the models and ffmpeg) and
 adds Keymaster to the programs you have.
 

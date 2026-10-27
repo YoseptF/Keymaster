@@ -14,7 +14,7 @@ instalación tarda un rato.
 ## Windows
 
 1. Descarga `keymaster-installer-<versión>-windows.exe` de las
-   [versiones](https://github.com/YoseptF/Keymaster/releases) y haz doble clic. El instalador
+   [versiones](https://github.com/YoseptF/Keymaster/releases/latest) y haz doble clic. El instalador
    todavía no está firmado: si Windows SmartScreen lo detiene, elige **Más información** y luego
    **Ejecutar de todas formas**.
 2. Elige qué instalar. Los programas que se encontraron en esta computadora ya están marcados; los
@@ -38,7 +38,7 @@ final) para la carpeta. Desinstalación silenciosa: `"%LOCALAPPDATA%\Programs\Ke
 ## Linux
 
 1. Descarga `keymaster-installer-<versión>-linux.sh` de las
-   [versiones](https://github.com/YoseptF/Keymaster/releases).
+   [versiones](https://github.com/YoseptF/Keymaster/releases/latest).
 2. Ejecútalo en una terminal: `bash keymaster-installer-<versión>-linux.sh`
 3. Responde las preguntas (Enter elige la respuesta sugerida). Se instala en
    `~/.local/share/keymaster` y no necesita permisos de administrador, salvo para el plugin OpenFX:

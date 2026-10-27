@@ -14,7 +14,7 @@ takes a while.
 ## Windows
 
 1. Download `keymaster-installer-<version>-windows.exe` from the
-   [releases](https://github.com/YoseptF/Keymaster/releases) and double-click it. The installer is
+   [releases](https://github.com/YoseptF/Keymaster/releases/latest) and double-click it. The installer is
    not signed yet: if Windows SmartScreen stops it, choose **More info**, then **Run anyway**.
 2. Pick what to install. Programs found on this computer are already ticked; the rest say
    "not found on this computer".
@@ -38,7 +38,7 @@ folder. Silent uninstall: `"%LOCALAPPDATA%\Programs\Keymaster\uninstall.exe" /S`
 ## Linux
 
 1. Download `keymaster-installer-<version>-linux.sh` from the
-   [releases](https://github.com/YoseptF/Keymaster/releases).
+   [releases](https://github.com/YoseptF/Keymaster/releases/latest).
 2. Run it in a terminal: `bash keymaster-installer-<version>-linux.sh`
 3. Answer the questions (press Enter for the suggested answer). It installs into
    `~/.local/share/keymaster` and does not need administrator rights, except for the OpenFX plugin:
