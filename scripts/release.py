@@ -440,9 +440,9 @@ def cut_publish(root: Path, plan_dir: Path, dist: Path) -> None:
     for src, dst in renames.items():
         src.rename(dst)
     write_sums(dist)
+    body = RC_BANNER + "\n\n" + header(root, dist) + "\n\n" + (plan_dir / "notes.md").read_text(encoding="utf-8")
     git(root, "tag", plan["tag"], plan["sha"])
     git(root, "push", "origin", f"refs/tags/{plan['tag']}")
-    body = RC_BANNER + "\n\n" + header(root, dist) + "\n\n" + (plan_dir / "notes.md").read_text(encoding="utf-8")
     publish(root, plan["tag"], plan["title"], body, dist, prerelease=True)
 
 
@@ -508,6 +508,7 @@ def promote(root: Path, rc_tag: str, dist: Path, branch: str = "main") -> None:
     if sorted(rc_sums.values()) != sorted(new_sums.values()):
         raise ReleaseError("renaming changed file contents")
 
+    body = header(root, dist) + "\n\n" + notes(changesets, versions, found)
     update_changelogs(root, changesets, versions, found)
     env = bot_env()
     run(["git", "add", "-A", ".changeset", "packages", *(["bun.lock"] if (root / "bun.lock").is_file() else [])], root, env)
@@ -520,7 +521,6 @@ def promote(root: Path, rc_tag: str, dist: Path, branch: str = "main") -> None:
     git(root, "push", "origin", *[f"refs/tags/{tag}" for tag in new_tags])
     print("tagged " + ", ".join(new_tags))
 
-    body = header(root, dist) + "\n\n" + notes(changesets, versions, found)
     publish(root, f"v{product}", f"Keymaster {product}", body, dist, prerelease=False)
 
     listed = json.loads(gh(root, "release", "list", "--limit", "1000", "--json", "tagName,isPrerelease") or "[]")
