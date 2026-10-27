@@ -20,7 +20,6 @@ BUNDLE_ES = "Incluye los paquetes actualizados."
 SUMS = "SHA256SUMS"
 BOT_NAME = "github-actions[bot]"
 BOT_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com"
-ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REPO = "YoseptF/Keymaster"
 BUMPS = ("major", "minor", "patch")
 RELEASE_LINE = re.compile(r"""^\s*["']?([^"':\s]+)["']?\s*:\s*(major|minor|patch)\s*$""")
@@ -61,6 +60,10 @@ def git(root: Path, *args: str) -> str:
 
 def gh(root: Path, *args: str) -> str:
     return run([*shlex.split(os.environ.get("KEYMASTER_GH", "gh")), *args], root)
+
+
+def repo_root() -> Path:
+    return Path(run(["git", "rev-parse", "--show-toplevel"], Path.cwd()).strip())
 
 
 def origin_url(root: Path) -> str:
@@ -572,7 +575,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--branch", default="main")
     args = ap.parse_args(argv)
     try:
-        root = ROOT
+        root = repo_root()
         if args.command == "cut-prepare":
             cut_prepare(root, Path(args.out).resolve())
         elif args.command == "stamp":

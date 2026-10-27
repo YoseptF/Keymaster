@@ -356,6 +356,22 @@ class GuardTest(TempDirTest):
         with mock.patch.dict(os.environ, {"GITHUB_ACTIONS": "true"}):
             release.require_remote_access(repo, "x")
 
+    def test_cli_works_on_the_current_directory_repo(self) -> None:
+        repo, origin = self.make_repo()
+        result = subprocess.run([sys.executable, str(SCRIPTS / "release.py"), "cut-publish", "--plan", "p", "--dist", "d"],
+                                cwd=repo, env=self.env(), capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("only runs inside GitHub Actions", result.stderr)
+        self.assertIn("'Releases are built by CI only' in CONTRIBUTING.md", result.stderr)
+        (repo / "packages" / "core").mkdir(parents=True)
+        (repo / "packages" / "core" / "package.json").write_text('{"name": "keymaster-core", "version": "0.0.0"}\n')
+        result = subprocess.run([sys.executable, str(SCRIPTS / "release.py"), "stamp", '{"keymaster-core": "1.2.3"}'],
+                                cwd=repo / "packages", env=self.env(), capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('"version": "1.2.3"', (repo / "packages" / "core" / "package.json").read_text())
+        self.assertIn('"version": "0.0.0"', (ROOT / "packages" / "core" / "package.json").read_text())
+        self.assertEqual(self.remote_refs(origin), "")
+
 
 class InstallerNotesTest(TempDirTest):
     def notes(self) -> subprocess.CompletedProcess:
