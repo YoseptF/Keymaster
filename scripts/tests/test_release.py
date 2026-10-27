@@ -282,22 +282,79 @@ class RepoTest(TempDirTest):
         self.assertFalse((repo / "packages" / "installer" / "CHANGELOG.md").exists())
 
 
-class GuardTest(unittest.TestCase):
-    def test_publishing_commands_refuse_outside_actions(self) -> None:
-        env = {k: v for k, v in os.environ.items() if k != "GITHUB_ACTIONS"}
-        for args in (["cut-publish", "--plan", "p", "--dist", "d"], ["promote", "--dist", "d"]):
-            err = io.StringIO()
-            with mock.patch.dict(os.environ, env, clear=True), contextlib.redirect_stderr(err), \
-                    mock.patch.object(release, "gh", side_effect=AssertionError("gh called")), \
-                    mock.patch.object(release, "git", side_effect=AssertionError("git called")):
-                self.assertEqual(release.main(args), 1)
-            self.assertIn("only runs inside GitHub Actions", err.getvalue())
-            self.assertIn("'Releases are built by CI only' in CONTRIBUTING.md", err.getvalue())
-        with mock.patch.dict(os.environ, {"GITHUB_ACTIONS": "false"}):
-            with self.assertRaises(release.ReleaseError):
-                release.require_actions("x")
+class GuardTest(TempDirTest):
+    def make_repo(self, url: str | None = None) -> tuple[Path, Path]:
+        origin = self.tmp / "origin.git"
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True)
+        repo = self.tmp / "repo"
+        git(self.tmp, "init", "-q", "-b", "main", str(repo))
+        (repo / "file").write_text("x")
+        git(repo, "add", "-A")
+        git(repo, "commit", "-qm", "init")
+        git(repo, "tag", "v9.9.9")
+        git(repo, "remote", "add", "origin", url or str(origin))
+        return repo, origin
+
+    def env(self, **extra: str) -> dict:
+        env = {k: v for k, v in os.environ.items() if not k.startswith(("GITHUB_", "KEYMASTER_", "GH_"))}
+        env.update({"GIT_ALLOW_PROTOCOL": "file", "GH_STUB_DIR": str(self.tmp / "gh")}, **extra)
+        return env
+
+    def remote_refs(self, origin: Path) -> str:
+        return subprocess.run(["git", "--git-dir", str(origin), "for-each-ref"], capture_output=True, text=True, check=True).stdout
+
+    def attempts(self, repo: Path) -> list:
+        return [
+            lambda: release.push(repo, "refs/tags/v9.9.9"),
+            lambda: release.push(repo, "HEAD:refs/heads/main"),
+            lambda: release.push_main(repo, "main"),
+            lambda: release.gh_write(repo, "release", "create", "v9.9.9"),
+            lambda: release.gh_write(repo, "release", "delete", "v9.9.9", "--yes"),
+            lambda: release.publish(repo, "v9.9.9", "t", "b", self.tmp, prerelease=True),
+            lambda: release.cut_publish(repo, self.tmp / "plan", self.tmp / "dist"),
+            lambda: release.promote(repo, "v9.9.9-rc.1", self.tmp / "dist"),
+        ]
+
+    def test_nothing_reaches_the_remote_outside_actions(self) -> None:
+        repo, origin = self.make_repo()
+        stub = f"{sys.executable} {GH_STUB}"
+        for env in (self.env(), self.env(KEYMASTER_GH=stub), self.env(GITHUB_ACTIONS="false", KEYMASTER_GH=stub)):
+            with mock.patch.dict(os.environ, env, clear=True):
+                for attempt in self.attempts(repo):
+                    with self.assertRaisesRegex(release.ReleaseError, "only runs inside GitHub Actions"):
+                        attempt()
+        self.assertEqual(self.remote_refs(origin), "")
+        self.assertFalse((self.tmp / "gh" / "calls.jsonl").exists())
+
+    def test_test_opt_in_refuses_a_github_origin(self) -> None:
+        stub = f"{sys.executable} {GH_STUB}"
+        for url in ("https://github.com/keymaster-guard-test/none.git", "git@github.com:keymaster-guard-test/none.git"):
+            repo, _ = self.make_repo(url)
+            with mock.patch.dict(os.environ, self.env(KEYMASTER_RELEASE_TEST="1", KEYMASTER_GH=stub), clear=True):
+                for attempt in self.attempts(repo):
+                    with self.assertRaisesRegex(release.ReleaseError, "KEYMASTER_RELEASE_TEST only allows a local origin"):
+                        attempt()
+            shutil.rmtree(self.tmp / "repo")
+            shutil.rmtree(self.tmp / "origin.git")
+        self.assertFalse((self.tmp / "gh" / "calls.jsonl").exists())
+
+    def test_test_opt_in_needs_a_stub_gh(self) -> None:
+        repo, origin = self.make_repo()
+        with mock.patch.dict(os.environ, self.env(KEYMASTER_RELEASE_TEST="1"), clear=True):
+            with self.assertRaisesRegex(release.ReleaseError, "KEYMASTER_RELEASE_TEST only allows"):
+                release.push(repo, "refs/tags/v9.9.9")
+        self.assertEqual(self.remote_refs(origin), "")
+
+    def test_test_opt_in_with_a_local_origin_and_stub_pushes(self) -> None:
+        repo, origin = self.make_repo()
+        with mock.patch.dict(os.environ, self.env(KEYMASTER_RELEASE_TEST="1", KEYMASTER_GH=f"{sys.executable} {GH_STUB}"), clear=True):
+            release.push(repo, "refs/tags/v9.9.9")
+        self.assertIn("refs/tags/v9.9.9", self.remote_refs(origin))
+
+    def test_actions_is_allowed(self) -> None:
+        repo, _ = self.make_repo("https://github.com/keymaster-guard-test/none.git")
         with mock.patch.dict(os.environ, {"GITHUB_ACTIONS": "true"}):
-            release.require_actions("x")
+            release.require_remote_access(repo, "x")
 
 
 class InstallerNotesTest(TempDirTest):

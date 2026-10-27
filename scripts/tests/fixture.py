@@ -114,11 +114,12 @@ class Fixture:
         return job
 
     def env(self, actions: bool = True, output: Path | None = None) -> dict:
-        env = {k: v for k, v in os.environ.items() if not k.startswith(("GITHUB_", "GH_", "KEYMASTER_"))}
+        env = {k: v for k, v in os.environ.items() if not k.startswith(("GITHUB_", "GH_", "KEYMASTER_", "GIT_"))}
         env.update({"KEYMASTER_GH": f"{sys.executable} {GH_STUB}", "GH_STUB_DIR": str(self.state),
                     "GH_STUB_REMOTE": str(self.origin), "GITHUB_REPOSITORY": REPO, "PYTHONDONTWRITEBYTECODE": "1"})
+        env["GIT_ALLOW_PROTOCOL"] = "file"
         if actions:
-            env["GITHUB_ACTIONS"] = "true"
+            env["KEYMASTER_RELEASE_TEST"] = "1"
         if output:
             env["GITHUB_OUTPUT"] = str(output)
         return env

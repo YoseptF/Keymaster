@@ -13,7 +13,6 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = "keymaster-installer"
 BUNDLE_ID = "keymaster-installer-bundles-the-packages"
 BUNDLE_EN = "Bundles the updated packages."
@@ -21,6 +20,7 @@ BUNDLE_ES = "Incluye los paquetes actualizados."
 SUMS = "SHA256SUMS"
 BOT_NAME = "github-actions[bot]"
 BOT_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com"
+ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REPO = "YoseptF/Keymaster"
 BUMPS = ("major", "minor", "patch")
 RELEASE_LINE = re.compile(r"""^\s*["']?([^"':\s]+)["']?\s*:\s*(major|minor|patch)\s*$""")
@@ -29,6 +29,9 @@ RC_BANNER = ("**Release candidate.** For testing before the final release: insta
              "**Versión candidata.** Para probar antes de la versión final: instálala y reporta cualquier cosa que falle.")
 GUARD = ("error: {cmd} publishes release files and only runs inside GitHub Actions. "
          "Release files are built by CI only, see 'Releases are built by CI only' in CONTRIBUTING.md.")
+TEST_GUARD = ("error: {cmd} refused: KEYMASTER_RELEASE_TEST only allows a local origin and a stub gh "
+              "(KEYMASTER_GH), but origin is {url!r}")
+LOCAL_URL = re.compile(r"^(?:file://)?/")
 
 
 class ReleaseError(Exception):
@@ -60,13 +63,34 @@ def gh(root: Path, *args: str) -> str:
     return run([*shlex.split(os.environ.get("KEYMASTER_GH", "gh")), *args], root)
 
 
+def origin_url(root: Path) -> str:
+    result = subprocess.run(["git", "remote", "get-url", "origin"], cwd=root, capture_output=True, text=True)
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def require_remote_access(root: Path, cmd: str) -> None:
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        return
+    if os.environ.get("KEYMASTER_RELEASE_TEST") == "1":
+        url = origin_url(root)
+        if LOCAL_URL.match(url) and os.environ.get("KEYMASTER_GH"):
+            return
+        raise ReleaseError(TEST_GUARD.format(cmd=cmd, url=url))
+    raise ReleaseError(GUARD.format(cmd=cmd))
+
+
+def push(root: Path, *refs: str, env: dict | None = None) -> None:
+    require_remote_access(root, "git push")
+    run(["git", "push", "origin", *refs], root, env)
+
+
+def gh_write(root: Path, *args: str) -> str:
+    require_remote_access(root, f"gh {' '.join(args[:2])}")
+    return gh(root, *args)
+
+
 def repo_name() -> str:
     return os.environ.get("GITHUB_REPOSITORY") or DEFAULT_REPO
-
-
-def require_actions(cmd: str) -> None:
-    if os.environ.get("GITHUB_ACTIONS") != "true":
-        raise ReleaseError(GUARD.format(cmd=cmd))
 
 
 def parse_changeset(cid: str, text: str) -> Changeset:
@@ -357,10 +381,10 @@ def publish(root: Path, tag: str, title: str, body: str, dist: Path, prerelease:
     with os.fdopen(handle, "w", encoding="utf-8") as f:
         f.write(body)
     create = ["release", "create", tag, "--verify-tag", "--draft", "--title", title, "--notes-file", str(notes_file)]
-    gh(root, *(create + (["--prerelease"] if prerelease else [])))
+    gh_write(root, *(create + (["--prerelease"] if prerelease else [])))
     for path in upload_order(dist):
-        gh(root, "release", "upload", tag, str(path))
-    gh(root, "release", "edit", tag, "--draft=false", *(["--prerelease"] if prerelease else ["--latest"]))
+        gh_write(root, "release", "upload", tag, str(path))
+    gh_write(root, "release", "edit", tag, "--draft=false", *(["--prerelease"] if prerelease else ["--latest"]))
     notes_file.unlink()
     print(f"published {title} ({tag})")
 
@@ -428,7 +452,7 @@ def cut_prepare(root: Path, out: Path) -> dict:
 
 
 def cut_publish(root: Path, plan_dir: Path, dist: Path) -> None:
-    require_actions("release.py cut-publish")
+    require_remote_access(root, "release.py cut-publish")
     plan = json.loads((plan_dir / "plan.json").read_text(encoding="utf-8"))
     if (dist / SUMS).exists():
         raise ReleaseError(f"{dist} already has a {SUMS}; it must hold only this run's build")
@@ -442,7 +466,7 @@ def cut_publish(root: Path, plan_dir: Path, dist: Path) -> None:
     write_sums(dist)
     body = RC_BANNER + "\n\n" + header(root, dist) + "\n\n" + (plan_dir / "notes.md").read_text(encoding="utf-8")
     git(root, "tag", plan["tag"], plan["sha"])
-    git(root, "push", "origin", f"refs/tags/{plan['tag']}")
+    push(root, f"refs/tags/{plan['tag']}")
     publish(root, plan["tag"], plan["title"], body, dist, prerelease=True)
 
 
@@ -455,16 +479,17 @@ def bot_env() -> dict:
 
 def push_main(root: Path, branch: str) -> None:
     env = bot_env()
+    require_remote_access(root, "git push")
     try:
-        run(["git", "push", "origin", f"HEAD:refs/heads/{branch}"], root, env)
+        push(root, f"HEAD:refs/heads/{branch}", env=env)
     except ReleaseError as first:
         print(f"push rejected, rebasing on the new {branch} and retrying once: {first}")
         run(["git", "pull", "--rebase", "origin", branch], root, env)
-        run(["git", "push", "origin", f"HEAD:refs/heads/{branch}"], root, env)
+        push(root, f"HEAD:refs/heads/{branch}", env=env)
 
 
 def promote(root: Path, rc_tag: str, dist: Path, branch: str = "main") -> None:
-    require_actions("release.py promote")
+    require_remote_access(root, "release.py promote")
     existing = tags(root)
     rc_tag = rc_tag or newest_rc(existing)
     if rc_tag not in existing:
@@ -518,7 +543,7 @@ def promote(root: Path, rc_tag: str, dist: Path, branch: str = "main") -> None:
     new_tags = [f"v{product}"] + [f"{name}@{versions[name]['new']}" for name in bumped(versions)]
     for tag in new_tags:
         git(root, "tag", tag, rc_sha)
-    git(root, "push", "origin", *[f"refs/tags/{tag}" for tag in new_tags])
+    push(root, *[f"refs/tags/{tag}" for tag in new_tags])
     print("tagged " + ", ".join(new_tags))
 
     publish(root, f"v{product}", f"Keymaster {product}", body, dist, prerelease=False)
@@ -527,7 +552,7 @@ def promote(root: Path, rc_tag: str, dist: Path, branch: str = "main") -> None:
     pattern = re.compile(r"^v" + re.escape(product) + r"-rc\.\d+$")
     for release in listed:
         if release.get("isPrerelease") and pattern.match(release["tagName"]):
-            gh(root, "release", "delete", release["tagName"], "--yes")
+            gh_write(root, "release", "delete", release["tagName"], "--yes")
             print(f"deleted the pre-release {release['tagName']} (its tag stays)")
 
 
@@ -547,14 +572,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--branch", default="main")
     args = ap.parse_args(argv)
     try:
+        root = ROOT
         if args.command == "cut-prepare":
-            cut_prepare(ROOT, Path(args.out).resolve())
+            cut_prepare(root, Path(args.out).resolve())
         elif args.command == "stamp":
-            stamp(ROOT, json.loads(args.versions))
+            stamp(root, json.loads(args.versions))
         elif args.command == "cut-publish":
-            cut_publish(ROOT, Path(args.plan).resolve(), Path(args.dist).resolve())
+            cut_publish(root, Path(args.plan).resolve(), Path(args.dist).resolve())
         elif args.command == "promote":
-            promote(ROOT, args.rc.strip(), Path(args.dist).resolve(), args.branch)
+            promote(root, args.rc.strip(), Path(args.dist).resolve(), args.branch)
     except ReleaseError as error:
         message = str(error)
         print(message if message.startswith("error:") else f"::error::{message}", file=sys.stderr)

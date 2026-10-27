@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -62,7 +63,13 @@ class ReleaseFlowTest(unittest.TestCase):
             self.assertEqual(result.returncode, 1)
             self.assertIn("only runs inside GitHub Actions", result.stderr)
             self.assertIn("CONTRIBUTING.md", result.stderr)
+        subprocess.run(["git", "-C", str(job), "remote", "set-url", "origin", "https://github.com/keymaster-guard-test/none.git"], check=True)
+        for args in (["cut-publish", "--plan", "tmp/plan", "--dist", "tmp/dist"], ["promote", "--dist", "tmp/dist"]):
+            result = self.fx.release_py(job, *args)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("KEYMASTER_RELEASE_TEST only allows a local origin", result.stderr)
         self.assertEqual(self.fx.calls(), [])
+        self.assertEqual(self.fx.origin_git("tag", "--list"), "")
 
     def test_cut_twice_then_promote_the_newest(self) -> None:
         fx = self.fx
