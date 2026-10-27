@@ -12,6 +12,9 @@ on:
       retention-days:
         type: number
         default: 14
+      versions:
+        type: string
+        default: ""
 
 jobs:
   linux:
@@ -44,6 +47,11 @@ jobs:
             $sudo apt-get update -qq
             DEBIAN_FRONTEND=noninteractive $sudo apt-get install -y -qq $need
           fi
+      - name: Stamp the release versions
+        if: inputs.versions != ''
+        run: python scripts/release.py stamp "$VERSIONS"
+        env:
+          VERSIONS: ${{ inputs.versions }}
       - run: python scripts/package.py --platform all --suffix="${{ inputs.suffix }}"
       - id: upload
         uses: actions/upload-artifact@v4

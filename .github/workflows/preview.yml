@@ -2,7 +2,7 @@ name: Preview
 
 on:
   pull_request:
-    branches: [release]
+    branches: [main]
     types: [opened, synchronize, reopened]
 
 concurrency:
@@ -15,7 +15,6 @@ permissions:
 
 jobs:
   build:
-    if: github.head_ref != 'changeset-release/release'
     uses: ./.github/workflows/build.yml
     with:
       suffix: -pr${{ github.event.number }}
