@@ -60,7 +60,24 @@ function Install-Packages([string[]]$Arguments) {
 
 if (-not $HasUv) { Invoke-Checked $Py @("-m", "pip", "install", "--upgrade", "pip") }
 Install-Packages @("torch==2.9.1", "torchvision==0.24.1", "--index-url", $TorchIndex)
-Install-Packages @("-r", (Join-Path $Core "upstream\requirements.txt"))
+$Requirements = Join-Path $Core "upstream\requirements.txt"
+if ($env:KEYMASTER_WHEELS -and (Test-Path -LiteralPath $env:KEYMASTER_WHEELS -PathType Container)) {
+    $lines = foreach ($line in (Get-Content -LiteralPath $Requirements -Encoding UTF8)) {
+        if ($line -match '^\s*([A-Za-z0-9_.-]+) @ git\+') {
+            $pattern = ($Matches[1] -replace '-', '_') + "-*.whl"
+            $wheel = Get-ChildItem -LiteralPath $env:KEYMASTER_WHEELS -Filter $pattern | Sort-Object Name | Select-Object -Last 1
+            if ($wheel) { $line = "$($Matches[1]) @ $(([System.Uri]$wheel.FullName).AbsoluteUri)" }
+        }
+        $line
+    }
+    $Requirements = Join-Path ([System.IO.Path]::GetTempPath()) "keymaster-requirements-$PID.txt"
+    [System.IO.File]::WriteAllLines($Requirements, [string[]]$lines, (New-Object System.Text.UTF8Encoding($false)))
+}
+try {
+    Install-Packages @("-r", $Requirements)
+} finally {
+    if ($Requirements -like "*keymaster-requirements-$PID.txt") { Remove-Item -LiteralPath $Requirements -Force -ErrorAction SilentlyContinue }
+}
 
 Push-Location $Core
 try {
