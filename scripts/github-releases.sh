@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
+if [ "${GITHUB_ACTIONS:-}" != "true" ]; then
+  echo "error: $(basename "$0") publishes release files and only runs inside GitHub Actions. Release files are built by CI only, see 'Releases are built by CI only' in CONTRIBUTING.md." >&2
+  exit 1
+fi
 for pkg in packages/*/package.json; do
   dir=$(dirname "$pkg"); name=$(jq -r .name "$pkg"); version=$(jq -r .version "$pkg"); tag="$name@$version"
   git rev-parse -q --verify "refs/tags/$tag" >/dev/null || continue
