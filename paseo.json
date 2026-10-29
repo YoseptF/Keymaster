@@ -1,0 +1,44 @@
+{
+  "worktree": {
+    "setup": [
+      "# The changesets CLI behind `bun run changeset`.",
+      "bun install --frozen-lockfile",
+      "# The models are gitignored and about 5 GB. Link the source checkout's copies file by file",
+      "# (the folders themselves are tracked for their .gitkeep) so a real key or the core's",
+      "# install.sh in this worktree does not download them again.",
+      "for d in packages/core/upstream/weights packages/core/upstream/vfms/cradio packages/core/upstream/vfms/moge packages/core/upstream/vfms/rvm; do for f in \"$PASEO_SOURCE_CHECKOUT_PATH/$d\"/*; do if [ -e \"$f\" ] && [ ! -e \"$d/${f##*/}\" ]; then ln -s \"$f\" \"$d/\"; fi; done; done"
+    ],
+    "teardown": [
+      "# Everything else is under node_modules/, tmp/, dist/, packages/openfx/build/ and goes with the directory.",
+      "find packages/core/upstream/weights packages/core/upstream/vfms -maxdepth 2 -type l -delete"
+    ]
+  },
+  "scripts": {
+    "test": {
+      "command": "bun run test"
+    },
+    "i18n": {
+      "command": "bun run check:i18n"
+    },
+    "ci": {
+      "command": "bun run check:i18n && bun run test && bun run check:changeset"
+    },
+    "app (fake core)": {
+      "command": "bash scripts/app-dev.sh"
+    },
+    "build": {
+      "command": "bun run build"
+    }
+  },
+  "metadataGeneration": {
+    "branchName": {
+      "instructions": "Branch off `main`, the only long-lived branch. Lowercase kebab-case slug of what the change\ndoes, no kind prefix, no ticket numbers, no author prefix (e.g. installer-package,\nguard-major-bumps, fix-first-ci-runs)."
+    },
+    "commitMessage": {
+      "instructions": "One line, nothing else: no body, no Conventional Commits type prefix, no trailers, no tool\nattribution. A short plain-English imperative sentence, capitalised, no trailing period\n(e.g. \"Add the one-file Linux installer\", \"Keep download progress out of logs\"). Commit often,\none change per commit."
+    },
+    "pullRequest": {
+      "instructions": "Target base branch `main`. Title is a short plain phrase of what ships (e.g. \"One-click\ninstallers for Windows and Linux\"). Open with a paragraph saying what is now true for the user\nor maintainer and why. Then \"How to test:\" as a numbered list of steps a person can follow,\nusing this PR's build comment downloads when it changes a package. End with \"Tested here:\"\nnaming what ran green (`bun run test`, `bun run check:i18n`, real hosts or the fake core) and\nwhat was not covered. If a package under packages/ changed, the branch must carry a changeset\n(`bun run changeset`, English sentence plus an `es-419: ` line; `--empty` when users notice\nnothing). User-facing text goes through `t(\"key\")` in both en and es-419. No tool attribution."
+    }
+  }
+}
